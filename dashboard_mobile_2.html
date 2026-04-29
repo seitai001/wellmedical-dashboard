@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1117">
+<title>WM整体院 管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--surface3:#e8e6df;
+  --bd:#e0ddd4;--bd2:#cbc8bc;
+  --t1:#18170f;--t2:#6a6860;--t3:#9a9890;
+  --green:#1a9e70;--gbg:#e8f5ee;--gt:#2a6e4a;
+  --amber:#b87310;--abg:#faeeda;--at:#7a4e08;
+  --red:#a02828;--rbg:#fbeaea;--rt:#802020;
+  --blue:#1458a0;--bbg:#e5f0fb;--bt:#0e3e78;
+  --accent:#1a9e70;
+  --r:10px;--rl:16px;
+  --sans:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  --bottom-nav:64px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);background:var(--bg);color:var(--t1);font-size:14px;line-height:1.5;display:flex;flex-direction:column}
+
+/* ===== ヘッダー ===== */
+.hd{background:var(--surface);border-bottom:1px solid var(--bd);padding:0 16px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;z-index:100}
+.hd-logo{font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--t1)}
+.hd-logo span{color:var(--green);font-size:10px;background:var(--gbg);padding:2px 7px;border-radius:4px;margin-left:6px;font-weight:500}
+.hd-r{display:flex;align-items:center;gap:8px}
+.month-sel{display:flex;gap:4px;align-items:center}
+.month-sel select{padding:4px 8px;border:1px solid var(--bd2);border-radius:8px;font-size:12px;background:var(--surface2);color:var(--t1);outline:none}
+.sync-btn{width:32px;height:32px;border:1px solid var(--bd2);border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--bd2)}
+.dot.ok{background:var(--green)}
+.dot.loading{background:var(--amber);animation:pulse 1s infinite}
+.dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ===== メインスクロール ===== */
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px calc(var(--bottom-nav) + 12px)}
+
+/* ===== ページ ===== */
+.pg{display:none}
+.pg.on{display:block}
+
+/* ===== カード ===== */
+.card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px}
+.ct{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:10px;letter-spacing:.05em;text-transform:none}
+
+/* ===== メトリクスグリッド ===== */
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.m{background:var(--surface2);border-radius:var(--r);padding:12px}
+.ml{font-size:10px;color:var(--t2);margin-bottom:4px;letter-spacing:.03em}
+.mv{font-size:20px;font-weight:700;color:var(--t1);line-height:1.2}
+.mu{font-size:11px;font-weight:400;color:var(--t2);margin-left:1px}
+.ms{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* ===== バッジ ===== */
+.bg{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px}
+.g{background:var(--gbg);color:var(--gt)}
+.a{background:var(--abg);color:var(--at)}
+.r{background:var(--rbg);color:var(--rt)}
+.b{background:var(--bbg);color:var(--bt)}
+
+/* ===== 店舗カード ===== */
+.store-card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--rl);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.store-card:active{background:var(--surface2)}
+.store-card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.store-name{font-size:14px;font-weight:700}
+.store-staff{font-size:11px;color:var(--t2);margin-top:2px}
+.store-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sm{background:var(--surface2);border-radius:8px;padding:8px;text-align:center}
+.sm-val{font-size:14px;font-weight:700}
+.sm-lbl{font-size:9px;color:var(--t2);margin-top:1px}
+.sm-sales{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.sale-item{background:var(--surface2);border-radius:8px;padding:8px}
+.sale-lbl{font-size:9px;color:var(--t2);margin-bottom:2px}
+.sale-val{font-size:12px;font-weight:700}
+.chevron{color:var(--t3);font-size:18px}
+
+/* ===== 詳細パネル ===== */
+.detail-panel{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.detail-panel.open{transform:translateX(0)}
+.detail-hd{background:var(--surface);border-bottom:1px solid var(--bd);padding:0 16px;height:54px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.back-btn{width:32px;height:32px;border:1px solid var(--bd2);border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--t1)}
+.detail-title{font-size:15px;font-weight:700}
+.detail-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 20px}
+.staff-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.st{padding:6px 14px;border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-size:12px;color:var(--t2);background:var(--surface);white-space:nowrap;flex-shrink:0}
+.st.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.staff-panel{display:none}
+.staff-panel.on{display:block}
+
+/* ===== 経路・分析グリッド ===== */
+.rg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px}
+.ri{background:var(--surface2);border-radius:8px;padding:10px;text-align:center}
+.rn{font-size:18px;font-weight:700}
+.rl{font-size:10px;color:var(--t2);margin-top:2px}
+.rp{font-size:11px;color:var(--blue);font-weight:600;margin-top:1px}
+
+/* ===== テーブル ===== */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);font-size:10px;color:var(--t2);font-weight:600;background:var(--surface2)}
+td{padding:7px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+
+/* ===== バー ===== */
+.bar{height:3px;background:var(--bd);border-radius:2px;margin-top:4px;overflow:hidden}
+.bf{height:100%;border-radius:2px;background:var(--green);transition:width .4s}
+
+/* ===== ランキング ===== */
+.rank-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.rank-item:last-child{border-bottom:none}
+.rank-num{font-size:16px;width:28px;text-align:center;flex-shrink:0}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-store{font-size:10px;color:var(--t2)}
+.rank-val{font-size:13px;font-weight:700;color:var(--green);flex-shrink:0}
+
+/* ===== 来院経路ページ ===== */
+.filter-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.filter-row select{padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;font-size:12px;background:var(--surface2);color:var(--t1);outline:none;flex-shrink:0}
+
+/* ===== ボトムナビ ===== */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:var(--bottom-nav);background:var(--surface);border-top:1px solid var(--bd);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--t3);transition:.15s;border:none;background:none;font-family:var(--sans)}
+.bnav-btn.on{color:var(--green)}
+.bnav-icon{font-size:20px;line-height:1}
+.bnav-label{font-size:9px;font-weight:500;letter-spacing:.02em}
+
+/* ===== ローディング ===== */
+.load-msg{text-align:center;padding:30px;color:var(--t3);font-size:13px}
+
+/* ===== セクションタイトル ===== */
+.sec-title{font-size:11px;font-weight:600;color:var(--t2);margin:14px 0 8px;letter-spacing:.05em}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="hd">
+  <div class="hd-logo">WM整体院<span>管理</span></div>
+  <div class="hd-r">
+    <div class="month-sel">
+      <select id="yearSel"></select>
+      <select id="monthSel"></select>
+    </div>
+    <div class="sync-btn" onclick="reloadAll()"><div class="dot" id="syncDot"></div></div>
+  </div>
+</div>
+
+<!-- メイン -->
+<div class="main" id="mainScroll">
+
+  <!-- 全店舗サマリー -->
+  <div class="pg on" id="pg-summary">
+    <div class="mg" id="sum-metrics"></div>
+    <div class="sec-title">店舗一覧</div>
+    <div id="store-list"></div>
+  </div>
+
+  <!-- 来院経路&分析 -->
+  <div class="pg" id="pg-route">
+    <div class="filter-row">
+      <select id="r-store" onchange="updateRoute()"><option value="all">全店舗</option></select>
+      <select id="r-staff" onchange="updateRoute()"><option value="all">全スタッフ</option></select>
+    </div>
+    <div class="card">
+      <div class="ct">来院経路</div>
+      <div class="rg" id="r-route-grid"></div>
+    </div>
+    <div class="card">
+      <div class="ct">年齢別成約率</div>
+      <table><thead><tr><th>年齢</th><th>人数</th><th>割合</th><th>成約率</th></tr></thead>
+      <tbody id="r-age"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="ct">お悩み別成約率</div>
+      <table><thead><tr><th>お悩み</th><th>人数</th><th>割合</th><th>成約率</th></tr></thead>
+      <tbody id="r-concern"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="ct">性別別成約率</div>
+      <table><thead><tr><th>性別</th><th>人数</th><th>割合</th><th>成約率</th></tr></thead>
+      <tbody id="r-gender"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="ct">経路別成約率</div>
+      <table><thead><tr><th>経路</th><th>人数</th><th>割合</th><th>成約率</th></tr></thead>
+      <tbody id="r-rconv"></tbody></table>
+    </div>
+  </div>
+
+  <!-- クロス分析 -->
+  <div class="pg" id="pg-cross">
+    <div class="card">
+      <div class="ct">🏆 トライアル成約率</div>
+      <div id="rank-trial"></div>
+    </div>
+    <div class="card">
+      <div class="ct">🏆 回数券購入率</div>
+      <div id="rank-coupon"></div>
+    </div>
+    <div class="card">
+      <div class="ct">🏆 メンテ移行率</div>
+      <div id="rank-maint"></div>
+    </div>
+    <div class="card">
+      <div class="ct">🏆 販売売上</div>
+      <div id="rank-product"></div>
+    </div>
+    <div class="card">
+      <div class="ct">🏆 消費売上</div>
+      <div id="rank-consume"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ボトムナビ -->
+<div class="bnav">
+  <button class="bnav-btn on" onclick="showPage('summary',this)">
+    <span class="bnav-icon">🏠</span><span class="bnav-label">サマリー</span>
+  </button>
+  <button class="bnav-btn" onclick="showPage('route',this)">
+    <span class="bnav-icon">📊</span><span class="bnav-label">経路分析</span>
+  </button>
+  <button class="bnav-btn" onclick="showPage('cross',this)">
+    <span class="bnav-icon">🏆</span><span class="bnav-label">ランキング</span>
+  </button>
+</div>
+
+<!-- 店舗詳細パネル -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-hd">
+    <button class="back-btn" onclick="closeDetail()">←</button>
+    <div class="detail-title" id="detailTitle"></div>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<script>
+// ============================================================
+// GAS URLs（全店舗固定）
+// ============================================================
+const GAS_URLS = [
+  {name:"大阪玉造",   url:"https://script.google.com/macros/s/AKfycbzrm1k2AJDlC_cIRu5LE40HkC1-SiVknIbVx8bfVW_F32CzAkAZn-RaBRFTCOyLAh4/exec"},
+  {name:"大和西大寺", url:"https://script.google.com/macros/s/AKfycby8ra_J_B1KMkk23c8_XeEGfeXyiuKn3rOCz8vcvuZH6jDU8tVCY6hBZP7PUK_zGojS1w/exec"},
+  {name:"姫路",       url:"https://script.google.com/macros/s/AKfycbwxnlPuQpIgaSyoerugODx1NTovmETtbW-8xaYX3tOkDph6hhwwOCke_RnrPMeZpgwy/exec"},
+  {name:"中百舌鳥",   url:"https://script.google.com/macros/s/AKfycbz_blp--JFDhdNOWshEjsF5GiLdqNWpyz3rmUvDBYQWuUodDPw_QCPTv_t_7vTqUy-tiw/exec"},
+  {name:"三国ヶ丘",   url:"https://script.google.com/macros/s/AKfycbxPofjWMz67EbkvLnoXtXnMRaCQE2-OOmc0JhXA29B_XFnYp4b4wme0gqonp6AXbolZoA/exec"},
+  {name:"心斎橋",     url:"https://script.google.com/macros/s/AKfycbxTeWpn0JBtP60JcdoM2ZcsD2BK_5QvvGLFyjOzYKEazaXb6tgxQVt6RGM0xIwEcxDKLQ/exec"},
+  {name:"大阪茨木",   url:"https://script.google.com/macros/s/AKfycbwv7T-Q8BzN9amuz56J2Rm8ews12SK7mJMFkj84wPyiogbyFJBSCZ534pyDG6NVoWqHgw/exec"},
+  {name:"豊中",       url:"https://script.google.com/macros/s/AKfycbxpO5VIeEKpP4cF-9BRXUVyUwYk52fuUiAG1rq7N-Dy4jQ5n8Qm4njoRs-LFns0NAx9/exec"},
+  {name:"柏",         url:"https://script.google.com/macros/s/AKfycbxC_2x-kJBOTzmDzuiBewGlGtnUaJmXG1y1n8KbmdNYk6FKo_3wXhHy8p45FdQmLrYDmg/exec"},
+  {name:"鹿児島",     url:"https://script.google.com/macros/s/AKfycbwWsiyXx3lxVLGma5gwa5WtBHBynghPgihuRFswhGCBNOVtodOyOFYhqkDI6aqxVVu9Pw/exec"},
+  {name:"塚口",       url:"https://script.google.com/macros/s/AKfycbyO0fNvOML9E9bBIR2naVEuk7rUwGmlA5KGVlfNpI8uxmRGmsH4npeZsEJekAborn8O1A/exec"},
+];
+
+const ROUTE_KEYS   = ["ホットペッパー","マップ検索","ホームページ","チラシ","インスタ","紹介","看板","その他"];
+const AGE_KEYS     = ["20代","30代","40代","50代","60代","70代以上"];
+const GENDER_KEYS  = ["男","女"];
+const CONCERN_KEYS = ["肩こり","首こり","姿勢の悪さ","骨盤の歪み","腰痛","眼性疲労","膝痛","五重肩","神経痛"];
+const MEDALS       = ["🥇","🥈","🥉"];
+
+let ALL_DATA = {};
+
+// ============================================================
+// データ取得
+// ============================================================
+async function reloadAll(){
+  setSyncState("loading");
+  const year  = parseInt(document.getElementById("yearSel").value);
+  const month = parseInt(document.getElementById("monthSel").value);
+  const params = `?year=${year}&month=${month}&mode=month`;
+
+  ALL_DATA = {};
+  let errCount = 0;
+  await Promise.all(GAS_URLS.map(async ({name,url})=>{
+    try {
+      const res = await fetch(url+params);
+      const json = await res.json();
+      if(json.error){ errCount++; }
+      else ALL_DATA[json.storeId||name] = json;
+    } catch(e){ errCount++; }
+  }));
+
+  setSyncState(errCount===0?"ok":"err");
+  refreshAll();
+}
+
+function setSyncState(s){
+  document.getElementById("syncDot").className = "dot "+s;
+}
+
+// ============================================================
+// 全体更新
+// ============================================================
+function refreshAll(){
+  buildSummary();
+  buildRouteFilters();
+  updateRoute();
+  buildRankings();
+}
+
+// ============================================================
+// サマリーページ
+// ============================================================
+function buildSummary(){
+  let totProduct=0,totConsume=0,totVisitors=0;
+  let totNextY=0,totNextT=0,totTrialP=0,totTrialC=0;
+  Object.values(ALL_DATA).forEach(d=>{
+    const t=d.storeTotal;
+    totProduct  += t.sales.product;
+    totConsume  += t.sales.consume;
+    totVisitors += t.totalVisitors||0;
+    totNextY    += t.nextAppt.yes;
+    totNextT    += t.nextAppt.total;
+    totTrialP   += t.trial.proposed;
+    totTrialC   += t.trial.closed;
+  });
+  const nextRate  = totNextT>0?Math.round(totNextY/totNextT*100):0;
+  const trialRate = totTrialP>0?Math.round(totTrialC/totTrialP*100):0;
+
+  document.getElementById("sum-metrics").innerHTML=`
+    <div class="m"><div class="ml">販売売上（全店）</div><div class="mv">${fmtM(totProduct)}</div></div>
+    <div class="m"><div class="ml">消費売上（全店）</div><div class="mv">${fmtM(totConsume)}</div></div>
+    <div class="m"><div class="ml">次回予約率</div><div class="mv">${nextRate}<span class="mu">%</span></div></div>
+    <div class="m"><div class="ml">トライアル成約率</div><div class="mv">${trialRate}<span class="mu">%</span></div></div>`;
+
+  // 店舗一覧
+  let html="";
+  Object.values(ALL_DATA).forEach(d=>{
+    const t=d.storeTotal;
+    const avg=Math.round(d.staff.reduce((a,st)=>a+(d.staffDetail?.[st]?.trial?.rate||0),0)/d.staff.length);
+    const statusCls=avg>=65?"g":avg>=41?"a":"r";
+    const statusLabel=avg>=65?"良好":avg>=41?"要注視":"要改善";
+    html+=`<div class="store-card" onclick="openDetail('${d.storeId}')">
+      <div class="store-card-hd">
+        <div>
+          <div class="store-name">${d.storeName}</div>
+          <div class="store-staff">${d.staff.join("・")}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="bg ${statusCls}">${statusLabel}</span>
+          <span class="chevron">›</span>
+        </div>
+      </div>
+      <div class="store-metrics">
+        <div class="sm"><div class="sm-val">${t.totalVisitors||0}<span style="font-size:10px;color:var(--t2)">名</span></div><div class="sm-lbl">新規数</div></div>
+        <div class="sm"><div class="sm-val ${statusCls==='g'?'g':''}">${badge(t.nextAppt.rate,[75,65])}</div><div class="sm-lbl">次回予約率</div></div>
+        <div class="sm"><div class="sm-val">${badge(t.trial.rate,[70,55])}</div><div class="sm-lbl">トライアル</div></div>
+      </div>
+      <div class="sm-sales">
+        <div class="sale-item"><div class="sale-lbl">販売売上</div><div class="sale-val">${fmtM(t.sales.product)}</div></div>
+        <div class="sale-item"><div class="sale-lbl">消費売上</div><div class="sale-val">${fmtM(t.sales.consume)}</div></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById("store-list").innerHTML=html||`<div class="load-msg">データを取得中...</div>`;
+}
+
+// ============================================================
+// 店舗詳細パネル
+// ============================================================
+function openDetail(storeId){
+  const d = Object.values(ALL_DATA).find(x=>x.storeId===storeId);
+  if(!d) return;
+  document.getElementById("detailTitle").textContent = d.storeName;
+  const isMulti = d.staff.length > 1;
+  let html="";
+
+  if(isMulti){
+    html+=`<div class="staff-tabs">`;
+    html+=`<button class="st on" onclick="switchStaffTab('total-${storeId}',this)">店舗合計</button>`;
+    d.staff.forEach(st=>{ html+=`<button class="st" onclick="switchStaffTab('${st}-${storeId}',this)">${st}</button>`; });
+    html+=`</div>`;
+    html+=buildStoreTotalPanel(d,storeId);
+    d.staff.forEach(st=>{ html+=buildStaffPanel(st,d,storeId,false); });
+  } else {
+    html+=buildStaffPanel(d.staff[0],d,storeId,true);
+  }
+
+  document.getElementById("detailBody").innerHTML=html;
+  document.getElementById("detailPanel").classList.add("open");
+  if(isMulti) document.getElementById(`panel-total-${storeId}`).classList.add("on");
+}
+
+function closeDetail(){
+  document.getElementById("detailPanel").classList.remove("open");
+}
+
+function switchStaffTab(key,btn){
+  const panel=document.getElementById("detailPanel");
+  panel.querySelectorAll(".st").forEach(b=>b.classList.remove("on"));
+  panel.querySelectorAll(".staff-panel").forEach(p=>p.classList.remove("on"));
+  btn.classList.add("on");
+  document.getElementById(`panel-${key}`).classList.add("on");
+}
+
+function buildStoreTotalPanel(d,storeId){
+  const t=d.storeTotal;
+  return `<div class="staff-panel" id="panel-total-${storeId}">
+    <div class="mg">
+      <div class="m"><div class="ml">販売売上</div><div class="mv">${fmtM(t.sales.product)}</div></div>
+      <div class="m"><div class="ml">消費売上</div><div class="mv">${fmtM(t.sales.consume)}</div></div>
+      <div class="m"><div class="ml">次回予約率</div><div class="mv">${t.nextAppt.rate}<span class="mu">%</span></div></div>
+      <div class="m"><div class="ml">トライアル成約率</div><div class="mv">${t.trial.rate}<span class="mu">%</span></div></div>
+    </div>
+    ${buildMetricCards(t)}
+  </div>`;
+}
+
+function buildStaffPanel(st,d,storeId,solo){
+  const sd=d.staffDetail?.[st];
+  if(!sd) return "";
+  const id=`panel-${st}-${storeId}`;
+  return `<div class="staff-panel${solo?" on":""}" id="${id}">
+    <div class="mg">
+      <div class="m"><div class="ml">販売売上</div><div class="mv">${fmtM(sd.sales.product)}</div></div>
+      <div class="m"><div class="ml">消費売上</div><div class="mv">${fmtM(sd.sales.consume)}</div></div>
+      <div class="m"><div class="ml">次回予約率</div><div class="mv">${sd.nextAppt.rate}<span class="mu">%</span></div></div>
+      <div class="m"><div class="ml">平均来院頻度</div><div class="mv" style="font-size:14px">${sd.avgFreqText||"—"}</div></div>
+    </div>
+    ${buildMetricCards(sd)}
+    <div class="card">
+      <div class="ct">来院経路</div>
+      <div class="rg">${buildRouteGrid(sd.routes)}</div>
+    </div>
+  </div>`;
+}
+
+function buildMetricCards(d){
+  return `
+  <div class="card">
+    <div class="ct">トライアル</div>
+    <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${d.trial.proposed}</td></tr>
+    <tr><td style="color:var(--t2)">成約数</td><td style="text-align:right;font-weight:700">${d.trial.closed}</td></tr>
+    <tr><td style="color:var(--t2)">成約率</td><td style="text-align:right">${badge(d.trial.rate,[70,55])}</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="ct">回数券</div>
+    <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${d.coupon.proposed}</td></tr>
+    <tr><td style="color:var(--t2)">購入数</td><td style="text-align:right;font-weight:700">${d.coupon.closed}</td></tr>
+    <tr><td style="color:var(--t2)">購入率</td><td style="text-align:right">${badge(d.coupon.rate,[70,55])}</td></tr>
+    <tr><td style="color:var(--t2)">4回券</td><td style="text-align:right">${d.coupon.breakdown?.["4回券"]||0}</td></tr>
+    <tr><td style="color:var(--t2)">8回券</td><td style="text-align:right">${d.coupon.breakdown?.["8回券"]||0}</td></tr>
+    <tr><td style="color:var(--t2)">12回券</td><td style="text-align:right">${d.coupon.breakdown?.["12回券"]||0}</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="ct">メンテナンス移行</div>
+    <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${d.maint.proposed}</td></tr>
+    <tr><td style="color:var(--t2)">移行数</td><td style="text-align:right;font-weight:700">${d.maint.closed}</td></tr>
+    <tr><td style="color:var(--t2)">移行率</td><td style="text-align:right">${badge(d.maint.rate,[65,50])}</td></tr></table>
+  </div>`;
+}
+
+function buildRouteGrid(routes){
+  const total=Object.values(routes||{}).reduce((a,b)=>a+b,0)||1;
+  return ROUTE_KEYS.map(k=>{
+    const v=routes?.[k]||0;
+    const p=Math.round(v/total*100);
+    return `<div class="ri"><div class="rn">${v}</div><div class="rl">${k}</div><div class="rp">${p}%</div></div>`;
+  }).join("");
+}
+
+// ============================================================
+// 来院経路&分析ページ
+// ============================================================
+function buildRouteFilters(){
+  const rs=document.getElementById("r-store");
+  const rst=document.getElementById("r-staff");
+  rs.innerHTML="<option value='all'>全店舗</option>";
+  rst.innerHTML="<option value='all'>全スタッフ</option>";
+  Object.values(ALL_DATA).forEach(d=>{
+    const o=document.createElement("option");
+    o.value=d.storeName;o.textContent=d.storeName;rs.appendChild(o);
+    Object.keys(d.staffDetail||{}).forEach(st=>{
+      const o2=document.createElement("option");
+      o2.value=st;o2.textContent=`${st}（${d.storeName}）`;rst.appendChild(o2);
+    });
+  });
+}
+
+function updateRoute(){
+  const store=document.getElementById("r-store").value;
+  const staff=document.getElementById("r-staff").value;
+  const sdList=[];
+  Object.values(ALL_DATA).forEach(d=>{
+    if(store!=="all"&&d.storeName!==store) return;
+    Object.entries(d.staffDetail||{}).forEach(([st,sd])=>{
+      if(staff!=="all"&&st!==staff) return;
+      sdList.push(sd);
+    });
+  });
+
+  // 来院経路
+  const routes={};ROUTE_KEYS.forEach(k=>routes[k]=0);
+  sdList.forEach(sd=>ROUTE_KEYS.forEach(k=>routes[k]+=(sd.routes?.[k]||0)));
+  const routeTotal=Object.values(routes).reduce((a,b)=>a+b,0)||1;
+  document.getElementById("r-route-grid").innerHTML=ROUTE_KEYS.map(k=>{
+    const v=routes[k];const p=Math.round(v/routeTotal*100);
+    return `<div class="ri"><div class="rn">${v}</div><div class="rl">${k}</div><div class="rp">${p}%</div></div>`;
+  }).join("");
+
+  // 共通集計関数
+  function makeRows(keys,statKey){
+    const agg={};keys.forEach(k=>agg[k]={total:0,closed:0});
+    sdList.forEach(sd=>{ keys.forEach(k=>{ const s=sd[statKey]?.[k]; if(s){agg[k].total+=s.total||0;agg[k].closed+=s.closed||0;} }); });
+    const grand=keys.reduce((s,k)=>s+agg[k].total,0)||1;
+    return keys.map(k=>{
+      const v=agg[k];
+      const pct=Math.round(v.total/grand*100);
+      const rate=v.total>0?Math.round(v.closed/v.total*100):0;
+      return `<tr><td>${k}</td><td style="text-align:right">${v.total}名</td><td style="text-align:right"><span class="bg b">${pct}%</span></td><td style="text-align:right">${v.total>0?badge(rate,[70,55]):"—"}</td></tr>`;
+    }).join("");
+  }
+
+  document.getElementById("r-age").innerHTML    = makeRows(AGE_KEYS,"ageStats");
+  document.getElementById("r-concern").innerHTML = makeRows(CONCERN_KEYS,"concernStats");
+  document.getElementById("r-gender").innerHTML  = makeRows(GENDER_KEYS,"genderStats");
+
+  // 経路別成約率
+  const rconvAgg={};ROUTE_KEYS.forEach(k=>rconvAgg[k]={total:routes[k],closed:0});
+  sdList.forEach(sd=>{ ROUTE_KEYS.forEach(k=>{ if(sd.routeConvRate?.[k]) rconvAgg[k].closed+=sd.routeConvRate[k].closed||0; }); });
+  document.getElementById("r-rconv").innerHTML=ROUTE_KEYS.map(k=>{
+    const v=rconvAgg[k];
+    const pct=Math.round(v.total/routeTotal*100);
+    const rate=v.total>0?Math.round(v.closed/v.total*100):0;
+    return `<tr><td>${k}</td><td style="text-align:right">${v.total}名</td><td style="text-align:right"><span class="bg b">${pct}%</span></td><td style="text-align:right">${v.total>0?badge(rate,[70,55]):"—"}</td></tr>`;
+  }).join("");
+}
+
+// ============================================================
+// ランキングページ
+// ============================================================
+function buildRankings(){
+  const rows=[];
+  Object.values(ALL_DATA).forEach(d=>{
+    Object.entries(d.staffDetail||{}).forEach(([st,sd])=>{
+      rows.push({st,store:d.storeName,sd});
+    });
+  });
+
+  function renderRank(id,sorted,valFn,fmtFn){
+    document.getElementById(id).innerHTML=sorted.map(({st,store,sd},i)=>`
+      <div class="rank-item">
+        <div class="rank-num">${i<3?MEDALS[i]:`${i+1}位`}</div>
+        <div class="rank-info"><div class="rank-name">${st}</div><div class="rank-store">${store}</div></div>
+        <div class="rank-val">${fmtFn(valFn(sd))}</div>
+      </div>`).join("")||`<div class="load-msg">データなし</div>`;
+  }
+
+  renderRank("rank-trial",   [...rows].sort((a,b)=>(b.sd.trial?.rate||0)-(a.sd.trial?.rate||0)),   sd=>sd.trial?.rate||0,   v=>badge(v,[70,55]));
+  renderRank("rank-coupon",  [...rows].sort((a,b)=>(b.sd.coupon?.rate||0)-(a.sd.coupon?.rate||0)), sd=>sd.coupon?.rate||0,  v=>badge(v,[70,55]));
+  renderRank("rank-maint",   [...rows].sort((a,b)=>(b.sd.maint?.rate||0)-(a.sd.maint?.rate||0)),   sd=>sd.maint?.rate||0,   v=>badge(v,[65,50]));
+  renderRank("rank-product", [...rows].sort((a,b)=>(b.sd.sales?.product||0)-(a.sd.sales?.product||0)), sd=>sd.sales?.product||0, v=>fmtM(v));
+  renderRank("rank-consume", [...rows].sort((a,b)=>(b.sd.sales?.consume||0)-(a.sd.sales?.consume||0)), sd=>sd.sales?.consume||0, v=>fmtM(v));
+}
+
+// ============================================================
+// ページ切替
+// ============================================================
+function showPage(name,btn){
+  document.querySelectorAll(".pg").forEach(p=>p.classList.remove("on"));
+  document.querySelectorAll(".bnav-btn").forEach(b=>b.classList.remove("on"));
+  document.getElementById("pg-"+name).classList.add("on");
+  btn.classList.add("on");
+  document.getElementById("mainScroll").scrollTop=0;
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function badge(v,thr){
+  const c=v>=thr[0]?"g":v>=thr[1]?"a":"r";
+  return `<span class="bg ${c}">${v}%</span>`;
+}
+function fmtM(v){
+  if(!v) return "—";
+  return "¥"+(Math.round(v/10)*10).toLocaleString("ja-JP")+"円";
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+(function init(){
+  const now=new Date();
+  const cy=now.getFullYear(),cm=now.getMonth()+1;
+  const ySel=document.getElementById("yearSel");
+  for(let y=2026;y<=cy+1;y++){
+    const o=document.createElement("option");
+    o.value=y;o.textContent=y+"年";
+    if(y===cy)o.selected=true;
+    ySel.appendChild(o);
+  }
+  const mSel=document.getElementById("monthSel");
+  for(let m=1;m<=12;m++){
+    const o=document.createElement("option");
+    o.value=m;o.textContent=m+"月";
+    if(m===cm)o.selected=true;
+    mSel.appendChild(o);
+  }
+  mSel.addEventListener("change",reloadAll);
+  ySel.addEventListener("change",reloadAll);
+  reloadAll();
+})();
+</script>
+</body>
+</html>
