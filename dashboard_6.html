@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ウェルメディカル整体院 — 管理ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--s2:#f0efe9;--s3:#e8e6df;
+  --bd:#e0ddd4;--bd2:#cbc8bc;
+  --t1:#18170f;--t2:#6a6860;--t3:#9a9890;
+  --green:#1a9e70;--gbg:#e8f5ee;--gt:#2a6e4a;
+  --amber:#b87310;--abg:#faeeda;--at:#7a4e08;
+  --red:#a02828;--rbg:#fbeaea;--rt:#802020;
+  --blue:#1458a0;--bbg:#e5f0fb;--bt:#0e3e78;
+  --r:8px;--rl:12px;
+  --sans:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--t1);font-size:14px;line-height:1.6}
+
+/* ヘッダー */
+.hd{background:var(--surface);border-bottom:1px solid var(--bd);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.hd-logo{font-size:15px;font-weight:700;letter-spacing:.02em}
+.hd-logo em{font-style:normal;color:var(--green);font-size:12px;margin-left:8px;background:var(--gbg);color:var(--gt);padding:2px 8px;border-radius:4px;font-weight:500}
+.hd-r{display:flex;align-items:center;gap:10px}
+.period-sel{padding:5px 10px;border:1px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--t1)}
+.sync-btn{padding:5px 14px;border:1px solid var(--bd2);border-radius:var(--r);background:var(--surface);color:var(--t2);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.sync-btn:hover{background:var(--s2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--bd2);flex-shrink:0}
+.dot.ok{background:var(--green)}
+.dot.loading{background:var(--amber);animation:blink 1s infinite}
+.dot.err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ナビ */
+.nav{background:var(--surface);border-bottom:1px solid var(--bd);padding:0 24px;display:flex}
+.nb{padding:11px 16px;border:none;background:none;color:var(--t2);font-size:13px;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--sans);transition:.12s}
+.nb.on{color:var(--t1);border-bottom-color:var(--green);font-weight:600}
+.nb:hover{background:var(--s2);color:var(--t1)}
+
+/* メイン */
+.main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.pg{display:none}.pg.on{display:block}
+
+/* グリッド */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+@media(max-width:900px){.g4,.g3{grid-template-columns:repeat(2,1fr)}}
+
+/* カード */
+.card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--rl);padding:16px 18px;margin-bottom:14px}
+.ct{font-size:13px;font-weight:600;color:var(--t1);padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--bd)}
+
+/* メトリクス */
+.m{background:var(--s2);border-radius:var(--r);padding:13px 15px}
+.ml{font-size:11px;color:var(--t2);margin-bottom:3px}
+.mv{font-size:23px;font-weight:700;color:var(--t1);line-height:1.2}
+.mu{font-size:12px;font-weight:400;color:var(--t2);margin-left:2px}
+.ms{font-size:11px;color:var(--t3);margin-top:3px}
+
+/* バッジ */
+.bg{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.g{background:var(--gbg);color:var(--gt)}
+.a{background:var(--abg);color:var(--at)}
+.r{background:var(--rbg);color:var(--rt)}
+.b{background:var(--bbg);color:var(--bt)}
+
+/* テーブル */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--bd);font-size:11px;color:var(--t2);font-weight:600;background:var(--s2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.sn{font-weight:700;font-size:13px}
+
+/* 店舗グリッド */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;margin-bottom:14px}
+.sc{padding:9px 10px;border:1px solid var(--bd);background:var(--surface);border-radius:var(--r);cursor:pointer;text-align:center;transition:.12s}
+.sc:hover{border-color:var(--bd2);background:var(--s2)}
+.sc.on{border-color:var(--green);background:var(--gbg)}
+.sc-name{font-size:12px;font-weight:600}
+.sc.on .sc-name{color:var(--gt)}
+.sc-sub{font-size:10px;color:var(--t3);margin-top:1px}
+.sc.on .sc-sub{color:var(--gt);opacity:.7}
+
+/* スタッフタブ */
+.stab{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.st{padding:4px 12px;border:1px solid var(--bd);border-radius:20px;cursor:pointer;font-size:12px;color:var(--t2);background:var(--surface);transition:.12s}
+.st.on{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* 経路グリッド */
+.rg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.ri{background:var(--s2);border-radius:var(--r);padding:9px;text-align:center}
+.rn{font-size:19px;font-weight:700}
+.rl{font-size:10px;color:var(--t2);margin-top:1px}
+.rp{font-size:12px;color:var(--blue);font-weight:600;margin-top:1px}
+
+/* バー */
+.bar{height:4px;background:var(--bd);border-radius:2px;margin-top:4px;overflow:hidden}
+.bf{height:100%;border-radius:2px;background:var(--green);transition:width .4s}
+
+/* 分析テーブル列幅固定 */
+.analysis-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.analysis-table th,.analysis-table td{padding:7px 10px;border-bottom:1px solid var(--bd);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.analysis-table th{background:var(--s2);font-size:11px;font-weight:600;color:var(--t2)}
+.analysis-table tr:last-child td{border-bottom:none}
+.analysis-table tr:hover td{background:var(--s2)}
+.col-label{width:30%}
+.col-num{width:15%;text-align:right}
+.col-pct{width:15%;text-align:right}
+.col-rate{width:15%;text-align:right}
+.col-bar{width:25%}
+
+/* チャート */
+.cw{position:relative;margin-top:10px}
+
+/* フィルター */
+.fb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--s2);border-radius:var(--r);border:1px solid var(--bd)}
+.fb label{font-size:12px;color:var(--t2);white-space:nowrap}
+.fb select{padding:4px 9px;border:1px solid var(--bd2);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--t1)}
+
+/* エラー/ローディング */
+.err-box{background:var(--rbg);color:var(--rt);padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:12px}
+.load-box{color:var(--t2);font-size:12px;padding:20px 0;text-align:center}
+
+/* GAS設定パネル */
+.setup{background:var(--surface);border:1px solid var(--bd);border-radius:var(--rl);padding:20px;margin-bottom:16px}
+.setup h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.setup p{font-size:12px;color:var(--t2);margin-bottom:14px}
+.url-input{width:100%;padding:7px 10px;border:1px solid var(--bd2);border-radius:var(--r);font-size:12px;font-family:monospace;margin-bottom:6px;color:var(--t1)}
+.add-btn{padding:6px 14px;border:1px solid var(--green);border-radius:var(--r);background:var(--gbg);color:var(--gt);font-size:12px;cursor:pointer;font-weight:600}
+
+/* ========== スマホ対応 ========== */
+@media(max-width:600px){
+  /* ヘッダー */
+  .hd{padding:0 12px;height:auto;min-height:54px;flex-wrap:wrap;gap:6px;padding-top:8px;padding-bottom:8px}
+  .hd-logo{font-size:13px}
+  .hd-logo em{font-size:10px;padding:1px 6px}
+  .hd-r{gap:6px;flex-wrap:wrap}
+  .period-sel{padding:4px 6px;font-size:11px}
+  .sync-btn{padding:4px 10px;font-size:11px}
+
+  /* ナビ：横スクロール */
+  .nav{padding:0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .nb{padding:10px 12px;font-size:12px;white-space:nowrap;flex-shrink:0}
+
+  /* メイン */
+  .main{padding:12px}
+
+  /* グリッド：全部1列に */
+  .g4,.g3,.g2{grid-template-columns:1fr;gap:8px}
+
+  /* カード */
+  .card{padding:12px 14px;margin-bottom:10px}
+  .ct{font-size:12px}
+
+  /* メトリクス */
+  .mv{font-size:20px}
+  .g4.metrics-row{grid-template-columns:repeat(2,1fr)}
+
+  /* テーブル：横スクロール */
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{font-size:11px}
+  th{padding:6px 8px;font-size:10px}
+  td{padding:6px 8px}
+
+  /* 店舗グリッド */
+  .sg{grid-template-columns:repeat(3,1fr);gap:6px}
+  .sc{padding:8px 6px}
+  .sc-name{font-size:11px}
+
+  /* 経路グリッド */
+  .rg{grid-template-columns:repeat(2,1fr);gap:6px}
+  .rn{font-size:16px}
+
+  /* フィルターバー */
+  .fb{flex-direction:column;align-items:flex-start;gap:6px;padding:8px 10px}
+  .fb select{width:100%;font-size:12px}
+
+  /* スタッフタブ */
+  .stab{gap:4px}
+  .st{font-size:11px;padding:3px 10px}
+
+  /* 分析テーブル */
+  .analysis-table{font-size:11px}
+  .analysis-table th,.analysis-table td{padding:6px 8px}
+  .col-bar{display:none}
+
+  /* ランキングテーブル */
+  .g3.rank-grid{grid-template-columns:1fr}
+
+  /* GAS設定 */
+  .setup{padding:14px}
+  .url-input{font-size:11px}
+}
+.add-btn:hover{background:var(--green);color:#fff}
+.url-list{margin-top:10px}
+.url-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--s2);border-radius:var(--r);margin-bottom:5px;font-size:12px}
+.url-item .name{font-weight:600;color:var(--t1)}
+.url-item .url{color:var(--t3);font-family:monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;margin:0 8px}
+.del-btn{padding:2px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--surface);color:var(--t3);font-size:11px;cursor:pointer}
+.del-btn:hover{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="hd">
+  <div class="hd-logo">ウェルメディカル整体院<em>管理ダッシュボード</em></div>
+  <div class="hd-r">
+    <select class="period-sel" id="yearSel" onchange="reloadAll()"></select>
+    <select class="period-sel" id="monthSel" onchange="reloadAll()">
+      <option value="1">1月</option>
+      <option value="2">2月</option>
+      <option value="3">3月</option>
+      <option value="4">4月</option>
+      <option value="5">5月</option>
+      <option value="6">6月</option>
+      <option value="7">7月</option>
+      <option value="8">8月</option>
+      <option value="9">9月</option>
+      <option value="10">10月</option>
+      <option value="11">11月</option>
+      <option value="12">12月</option>
+    </select>
+    <div class="sync-btn" onclick="reloadAll()">
+      <div class="dot" id="syncDot"></div>
+      <span id="syncLabel">データ取得</span>
+    </div>
+  </div>
+</div>
+
+<!-- ナビ -->
+<div class="nav">
+  <button class="nb on" onclick="showPage('overview',this)">全店舗サマリー</button>
+  <button class="nb" onclick="showPage('store',this)">店舗・スタッフ別</button>
+  <button class="nb" onclick="showPage('route',this)">来院経路&amp;成約率分析</button>
+  <button class="nb" onclick="showPage('cross',this)">クロス分析</button>
+  <button class="nb" onclick="showPage('settings',this)">⚙ GAS設定</button>
+</div>
+
+<div class="main">
+
+<!-- ====== 全店舗サマリー ====== -->
+<div class="pg on" id="pg-overview">
+  <div id="ov-metrics" class="g4 metrics-row"></div>
+  <div class="card">
+    <div class="ct">店舗別パフォーマンス一覧</div>
+    <div class="tw"><table id="ov-table">
+      <thead><tr>
+        <th>店舗</th><th>スタッフ</th>
+        <th>新規数</th><th>次回予約率</th>
+        <th>トライアル成約率</th><th>回数券購入率</th><th>メンテ移行率</th>
+        <th>平均来院頻度</th><th>販売売上</th><th>消費売上</th><th>状況</th>
+      </tr></thead>
+      <tbody id="ov-tbody"><tr><td colspan="11" class="load-box">GAS設定タブでURLを登録してください</td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">全店舗平均</div>
+      <table id="ov-avg-table">
+        <thead><tr><th>項目</th><th>全店平均</th><th></th></tr></thead>
+        <tbody id="ov-avg-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="ct">各スタッフの新規数</div>
+      <table>
+        <thead><tr><th>スタッフ</th><th>店舗</th><th>新規数</th><th></th></tr></thead>
+        <tbody id="ov-newvisitor-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 店舗・スタッフ別 ====== -->
+<div class="pg" id="pg-store">
+  <div class="sg" id="store-btns"></div>
+  <div id="store-detail"><p style="color:var(--t3);font-size:13px">上の店舗ボタンを選択してください</p></div>
+</div>
+
+<!-- ====== 来院経路&成約率分析 ====== -->
+<div class="pg" id="pg-route">
+  <div class="card">
+    <div class="ct">来院経路</div>
+    <div class="fb">
+      <label>店舗</label>
+      <select id="r-store" onchange="updateRouteView()"><option value="all">全店舗</option></select>
+      <label>スタッフ</label>
+      <select id="r-staff" onchange="updateRouteView()"><option value="all">全員</option></select>
+    </div>
+    <div class="rg" id="r-route-grid"></div>
+    <div class="cw" style="height:200px"><canvas id="routeBarChart" role="img" aria-label="来院経路別件数棒グラフ">経路別グラフ</canvas></div>
+  </div>
+  <div class="card">
+    <div class="ct">年齢別成約率</div>
+    <table class="analysis-table">
+      <colgroup><col class="col-label"><col class="col-num"><col class="col-pct"><col class="col-rate"><col class="col-bar"></colgroup>
+      <thead><tr><th>年齢</th><th style="text-align:right">人数</th><th style="text-align:right">割合</th><th style="text-align:right">成約率</th><th></th></tr></thead>
+      <tbody id="age-tbody"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">お悩み別成約率</div>
+    <table class="analysis-table">
+      <colgroup><col class="col-label"><col class="col-num"><col class="col-pct"><col class="col-rate"><col class="col-bar"></colgroup>
+      <thead><tr><th>お悩み</th><th style="text-align:right">人数</th><th style="text-align:right">割合</th><th style="text-align:right">成約率</th><th></th></tr></thead>
+      <tbody id="concern-tbody"></tbody>
+    </table>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">性別別成約率</div>
+      <table class="analysis-table">
+        <colgroup><col class="col-label"><col class="col-num"><col class="col-pct"><col class="col-rate"><col class="col-bar"></colgroup>
+        <thead><tr><th>性別</th><th style="text-align:right">人数</th><th style="text-align:right">割合</th><th style="text-align:right">成約率</th><th></th></tr></thead>
+        <tbody id="gender-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="ct">経路別成約率</div>
+      <table class="analysis-table">
+        <colgroup><col class="col-label"><col class="col-num"><col class="col-pct"><col class="col-rate"><col class="col-bar"></colgroup>
+        <thead><tr><th>経路</th><th style="text-align:right">人数</th><th style="text-align:right">割合</th><th style="text-align:right">成約率</th><th></th></tr></thead>
+        <tbody id="rconv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ====== クロス分析 ====== -->
+<div class="pg" id="pg-cross">
+  <div class="card">
+    <div class="ct">スタッフ別クロス分析</div>
+    <div class="fb" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div style="font-size:12px;color:var(--t2)">表示スタッフを選択（複数可）</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="st on" onclick="toggleAllStaff(this)" id="btn-all-staff">全員</button>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap" id="staff-btns"></div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr>
+        <th>スタッフ</th><th>店舗</th>
+        <th>新規数</th><th>次回予約率</th><th>トライアル成約率</th><th>回数券購入率</th><th>メンテ移行率</th>
+        <th>平均通院頻度</th>
+        <th>販売売上</th><th>消費売上</th>
+      </tr></thead>
+      <tbody id="cross-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">スタッフ別ランキング</div>
+    <div class="g3 rank-grid" style="margin-bottom:0">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">🏆 トライアル成約率</div>
+        <table><thead><tr><th>順位</th><th>スタッフ</th><th>店舗</th><th>成約率</th></tr></thead>
+        <tbody id="rank-trial"></tbody></table>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">🏆 回数券購入率</div>
+        <table><thead><tr><th>順位</th><th>スタッフ</th><th>店舗</th><th>購入率</th></tr></thead>
+        <tbody id="rank-coupon"></tbody></table>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">🏆 メンテ移行率</div>
+        <table><thead><tr><th>順位</th><th>スタッフ</th><th>店舗</th><th>移行率</th></tr></thead>
+        <tbody id="rank-maint"></tbody></table>
+      </div>
+    </div>
+    <div class="g2" style="margin-top:14px;margin-bottom:0">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">🏆 消費売上</div>
+        <table><thead><tr><th>順位</th><th>スタッフ</th><th>店舗</th><th>消費売上</th></tr></thead>
+        <tbody id="rank-consume"></tbody></table>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px">🏆 販売売上</div>
+        <table><thead><tr><th>順位</th><th>スタッフ</th><th>店舗</th><th>販売売上</th></tr></thead>
+        <tbody id="rank-product"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== GAS設定 ====== -->
+<div class="pg" id="pg-settings">
+  <div class="setup">
+    <h3>GAS WebアプリURLの登録</h3>
+    <p>各店舗のスプレッドシートにGASを設置してデプロイ後、発行されたURLを登録してください。</p>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="url-input" id="inp-name" placeholder="店舗名（例: 大阪玉造）" style="width:200px">
+      <input class="url-input" id="inp-url" placeholder="https://script.google.com/macros/s/...">
+      <button class="add-btn" onclick="addUrl()">追加</button>
+    </div>
+    <div class="url-list" id="url-list"></div>
+  </div>
+  <div class="card" style="font-size:12px;line-height:2">
+    <div class="ct">GASデプロイ手順</div>
+    <ol style="padding-left:18px;color:var(--t2)">
+      <li>各店舗のGoogleスプレッドシートを開く</li>
+      <li>メニュー「拡張機能」→「Apps Script」を開く</li>
+      <li>配布したGASスクリプト（gas_store_api_v2.js）の内容を貼り付ける</li>
+      <li>上部の <strong>CONFIG</strong> の storeId・storeName・staff を店舗に合わせて変更する</li>
+      <li>「デプロイ」→「新しいデプロイ」→ 種類:「ウェブアプリ」を選択</li>
+      <li>実行ユーザー:「自分」/ アクセス:「全員（Googleアカウント不要）」に設定</li>
+      <li>「デプロイ」ボタンを押してURLをコピー</li>
+      <li>このページの上のフォームにURLを貼り付けて「追加」</li>
+    </ol>
+    <p style="margin-top:10px;color:var(--at);background:var(--abg);padding:8px 10px;border-radius:var(--r)">
+      ⚠ シートのスタッフ名タブは「R7.3(井上)」「R7.4(三木)」のような形式で統一してください。<br>
+      売上シートには「売上」の文字を含むシート名にしてください（例：「売上管理」）。
+    </p>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// データストア
+// ============================================================
+const STORES_MASTER = [
+  {id:"yamato",     name:"大和西大寺", staff:["松田","小谷"]},
+  {id:"himeji",     name:"姫路",       staff:["橘","永吉"]},
+  {id:"naka",       name:"中百舌鳥",   staff:["小西"]},
+  {id:"mikuni",     name:"三国ヶ丘",   staff:["小林"]},
+  {id:"shinsai",    name:"心斎橋",     staff:["森本"]},
+  {id:"tamatsukuri",name:"大阪玉造",   staff:["井上","三木"]},
+  {id:"ibaraki",    name:"大阪茨木",   staff:["前田","上保"]},
+  {id:"toyonaka",   name:"豊中",       staff:["村上"]},
+  {id:"kashiwa",    name:"柏",         staff:["星野"]},
+  {id:"kagoshima",  name:"鹿児島",     staff:["永吉"]},
+  {id:"tsukaguchi", name:"塚口",       staff:["横内"]},
+];
+const ROUTE_KEYS = ["ホットペッパー","マップ検索","ホームページ","チラシ","インスタ","紹介","看板","その他"];
+const ROUTE_COLORS = ["#1D9E75","#378ADD","#BA7517","#D4537E","#7F77DD","#D85A30","#639922","#888780"];
+
+let GAS_URLS = [];
+let ALL_DATA = {}; // storeId → GASレスポンス
+let selectedStaff = new Set();
+let radarInst = null, routeInst = null, funnelInst = null;
+
+// ============================================================
+// URL管理
+// ============================================================
+function saveUrls(){ localStorage.setItem("wm_gas_urls", JSON.stringify(GAS_URLS)); }
+function addUrl(){
+  const name = document.getElementById("inp-name").value.trim();
+  const url  = document.getElementById("inp-url").value.trim();
+  if (!name||!url) return alert("店舗名とURLを入力してください");
+  if (!url.startsWith("https://script.google.com")) return alert("GAS WebアプリURLを入力してください");
+  GAS_URLS = GAS_URLS.filter(u=>u.name!==name);
+  GAS_URLS.push({name,url});
+  saveUrls(); renderUrlList(); reloadAll();
+  document.getElementById("inp-name").value="";
+  document.getElementById("inp-url").value="";
+}
+function removeUrl(name){
+  GAS_URLS = GAS_URLS.filter(u=>u.name!==name);
+  delete ALL_DATA[name];
+  saveUrls(); renderUrlList(); refreshAll();
+}
+function renderUrlList(){
+  document.getElementById("url-list").innerHTML = GAS_URLS.map(u=>`
+    <div class="url-item">
+      <span class="name">${u.name}</span>
+      <span class="url">${u.url}</span>
+      <button class="del-btn" onclick="removeUrl('${u.name}')">削除</button>
+    </div>`).join("")||"<p style='font-size:12px;color:var(--t3)'>まだURLが登録されていません</p>";
+}
+
+// ============================================================
+// GASからデータ取得
+// ============================================================
+async function reloadAll(){
+  setSyncState("loading","取得中...");
+  const year  = parseInt(document.getElementById("yearSel").value);
+  const month = parseInt(document.getElementById("monthSel").value);
+  const params = `?year=${year}&month=${month}&mode=month`;
+
+  ALL_DATA = {};
+  let errCount = 0;
+  await Promise.all(GAS_URLS.map(async ({name,url})=>{
+    try {
+      const res = await fetch(url+params);
+      const json = await res.json();
+      if (json.error) { errCount++; console.error(name, json.error); }
+      else ALL_DATA[json.storeId||name] = json;
+    } catch(e){ errCount++; console.error(name,e); }
+  }));
+
+  if (errCount>0 && Object.keys(ALL_DATA).length===0) setSyncState("err","取得失敗");
+  else if (errCount>0) setSyncState("err",`一部失敗(${errCount}店舗)`);
+  else setSyncState("ok","同期済み");
+
+  refreshAll();
+}
+
+// 複数月のデータを合算する
+function mergeMonthlyData(dataList){
+  if(dataList.length === 1) return dataList[0];
+  const base = JSON.parse(JSON.stringify(dataList[0]));
+
+  dataList.slice(1).forEach(d=>{
+    // storeTotal合算
+    mergeMetrics(base.storeTotal, d.storeTotal);
+    // staffDetail合算
+    Object.keys(d.staffDetail||{}).forEach(st=>{
+      if(base.staffDetail[st]) mergeMetrics(base.staffDetail[st], d.staffDetail[st]);
+    });
+  });
+
+  // 率を再計算
+  recalcRates(base.storeTotal);
+  Object.values(base.staffDetail||{}).forEach(sd => recalcRates(sd));
+  return base;
+}
+
+function mergeMetrics(a, b){
+  a.totalVisitors        = (a.totalVisitors||0)        + (b.totalVisitors||0);
+  a.nextAppt.yes         = (a.nextAppt.yes||0)         + (b.nextAppt.yes||0);
+  a.nextAppt.total       = (a.nextAppt.total||0)       + (b.nextAppt.total||0);
+  a.trial.proposed       = (a.trial.proposed||0)       + (b.trial.proposed||0);
+  a.trial.closed         = (a.trial.closed||0)         + (b.trial.closed||0);
+  a.coupon.proposed      = (a.coupon.proposed||0)      + (b.coupon.proposed||0);
+  a.coupon.closed        = (a.coupon.closed||0)        + (b.coupon.closed||0);
+  a.maint.proposed       = (a.maint.proposed||0)       + (b.maint.proposed||0);
+  a.maint.closed         = (a.maint.closed||0)         + (b.maint.closed||0);
+  a.sales.consume        = (a.sales.consume||0)        + (b.sales.consume||0);
+  a.sales.product        = (a.sales.product||0)        + (b.sales.product||0);
+  const RKEYS = ["ホットペッパー","マップ検索","ホームページ","チラシ","インスタ","紹介","看板","その他"];
+  RKEYS.forEach(k=>{ a.routes[k]=(a.routes[k]||0)+(b.routes[k]||0); });
+  Object.keys(b.coupon.breakdown||{}).forEach(k=>{
+    a.coupon.breakdown[k]=(a.coupon.breakdown[k]||0)+(b.coupon.breakdown[k]||0);
+  });
+  Object.keys(b.maint.types||{}).forEach(k=>{
+    a.maint.types[k]=(a.maint.types[k]||0)+(b.maint.types[k]||0);
+  });
+}
+
+function recalcRates(d){
+  d.nextAppt.rate = d.nextAppt.total>0 ? Math.round(d.nextAppt.yes/d.nextAppt.total*100) : 0;
+  d.trial.rate    = d.trial.proposed>0 ? Math.round(d.trial.closed/d.trial.proposed*100) : 0;
+  d.coupon.rate   = d.coupon.proposed>0? Math.round(d.coupon.closed/d.coupon.proposed*100): 0;
+  d.coupon.ratio  = d.trial.closed>0   ? Math.round(d.coupon.closed/d.trial.closed*100)  : 0;
+  d.maint.rate    = d.maint.proposed>0 ? Math.round(d.maint.closed/d.maint.proposed*100) : 0;
+  d.maint.ratio   = d.trial.closed>0   ? Math.round(d.maint.closed/d.trial.closed*100)   : 0;
+}
+
+function setSyncState(state,label){
+  const dot = document.getElementById("syncDot");
+  const lbl = document.getElementById("syncLabel");
+  dot.className = "dot "+state;
+  lbl.textContent = label;
+}
+
+// ============================================================
+// 全ビュー更新
+// ============================================================
+function refreshAll(){
+  buildOverview();
+  buildStoreBtns();
+  buildRouteFilters();
+  buildStaffBtns();
+  updateRouteView();
+  updateCrossTable();
+}
+
+// ============================================================
+// 全店舗サマリー
+// ============================================================
+function buildOverview(){
+  // 集計
+  let totalConsume=0,totalProduct=0,totalVisitors=0;
+  let totalNextY=0,totalNextT=0,totalTrialP=0,totalTrialC=0;
+  const totalRoutes={};ROUTE_KEYS.forEach(k=>totalRoutes[k]=0);
+
+  Object.values(ALL_DATA).forEach(d=>{
+    const t=d.storeTotal;
+    totalConsume+=t.sales.consume;
+    totalProduct+=t.sales.product;
+    totalVisitors+=t.totalVisitors||0;
+    totalNextY+=t.nextAppt.yes;totalNextT+=t.nextAppt.total;
+    totalTrialP+=t.trial.proposed;totalTrialC+=t.trial.closed;
+    ROUTE_KEYS.forEach(k=>totalRoutes[k]+=(t.routes[k]||0));
+  });
+
+  const nextRate = totalNextT>0?Math.round(totalNextY/totalNextT*100):0;
+  const trialRate= totalTrialP>0?Math.round(totalTrialC/totalTrialP*100):0;
+
+  document.getElementById("ov-metrics").innerHTML=`
+    <div class="m"><div class="ml">販売売上（全店）</div><div class="mv">${fmtM(totalProduct)}</div></div>
+    <div class="m"><div class="ml">消費売上（全店）</div><div class="mv">${fmtM(totalConsume)}</div></div>
+    <div class="m"><div class="ml">次回予約率（平均）</div><div class="mv">${nextRate}<span class="mu">%</span></div></div>
+    <div class="m"><div class="ml">トライアル成約率（平均）</div><div class="mv">${trialRate}<span class="mu">%</span></div></div>`;
+
+  // テーブル
+  let rows="";
+  STORES_MASTER.forEach(s=>{
+    const d = Object.values(ALL_DATA).find(x=>x.storeName===s.name);
+    if(!d) return;
+    const t=d.storeTotal;
+    const isMulti = s.staff.length > 1;
+    s.staff.forEach((st,i)=>{
+      const sd=d.staffDetail?.[st];
+      if(!sd) return;
+      const isFirst=i===0;
+      const rs=isMulti ? s.staff.length+1 : 1; // 合計行分+1
+      rows+=`<tr>`;
+      if(isFirst) rows+=`<td class="sn" rowspan="${rs}">${s.name}</td>`;
+      rows+=`<td>${st}</td>`;
+      rows+=`<td>${sd.totalVisitors||0}</td>`;
+      rows+=`<td>${badge(sd.nextAppt.rate,[75,65])}</td>`;
+      rows+=`<td>${badge(sd.trial.rate,[70,55])}</td>`;
+      rows+=`<td>${badge(sd.coupon.rate,[70,55])}</td>`;
+      rows+=`<td>${badge(sd.maint.rate,[65,50])}</td>`;
+      rows+=`<td style="font-size:11px">${sd.avgFreqText||"—"}</td>`;
+      // スタッフ別売上
+      rows+=`<td style="font-size:11px">${fmtM(sd.sales.product)}</td>`;
+      rows+=`<td style="font-size:11px">${fmtM(sd.sales.consume)}</td>`;
+      if(isFirst){
+        const avg=Math.round(s.staff.reduce((a,x)=>a+(d.staffDetail?.[x]?.trial?.rate||0),0)/s.staff.length);
+        const statusBadge = avg>=65?'<span class="bg g">良好</span>':avg>=41?'<span class="bg a">要注視</span>':'<span class="bg r">要改善</span>';
+        rows+=`<td rowspan="${rs}">${statusBadge}</td>`;
+      }
+      rows+="</tr>";
+    });
+    // 2名以上の場合は合計行を追加
+    if(isMulti){
+      const totP = s.staff.reduce((a,x)=>a+(d.staffDetail?.[x]?.sales?.product||0),0);
+      const totC = s.staff.reduce((a,x)=>a+(d.staffDetail?.[x]?.sales?.consume||0),0);
+      rows+=`<tr style="background:var(--s2);font-weight:600">`;
+      rows+=`<td style="font-size:11px;color:var(--t2)">合計</td>`;
+      rows+=`<td colspan="6"></td>`;
+      rows+=`<td style="font-size:11px;font-weight:700">${fmtM(totP)}</td>`;
+      rows+=`<td style="font-size:11px;font-weight:700">${fmtM(totC)}</td>`;
+      rows+=`</tr>`;
+    }
+  });
+  document.getElementById("ov-tbody").innerHTML=rows||"<tr><td colspan='11' class='load-box'>データなし</td></tr>";
+
+  // 全店舗平均
+  const allStaffData = [];
+  Object.values(ALL_DATA).forEach(d=>{
+    Object.values(d.staffDetail||{}).forEach(sd=>allStaffData.push(sd));
+  });
+  const cnt = allStaffData.length || 1;
+
+  const avgNextAppt  = Math.round(allStaffData.reduce((s,sd)=>s+(sd.nextAppt?.rate||0),0)/cnt);
+  const avgTrial     = Math.round(allStaffData.reduce((s,sd)=>s+(sd.trial?.rate||0),0)/cnt);
+  const avgCoupon    = Math.round(allStaffData.reduce((s,sd)=>s+(sd.coupon?.rate||0),0)/cnt);
+  const avgMaint     = Math.round(allStaffData.reduce((s,sd)=>s+(sd.maint?.rate||0),0)/cnt);
+
+  // 平均来院頻度（avgFreqTextから日数を抽出して平均）
+  const freqNums = allStaffData.map(sd=>{
+    const t = sd.avgFreqText||"";
+    const m = t.match(/(\d+(\.\d+)?)\s*日/);
+    return m ? parseFloat(m[1]) : null;
+  }).filter(v=>v!==null);
+  const avgFreq = freqNums.length>0
+    ? Math.round(freqNums.reduce((s,v)=>s+v,0)/freqNums.length*10)/10
+    : null;
+
+  document.getElementById("ov-avg-tbody").innerHTML = [
+    {label:"次回予約率",     val:avgNextAppt, thr:[75,65]},
+    {label:"トライアル成約率", val:avgTrial,    thr:[70,55]},
+    {label:"回数券購入率",    val:avgCoupon,   thr:[70,55]},
+    {label:"メンテ移行率",    val:avgMaint,    thr:[65,50]},
+  ].map(({label,val,thr})=>`
+    <tr>
+      <td style="color:var(--t2)">${label}</td>
+      <td>${badge(val,thr)}</td>
+      <td><div class="bar"><div class="bf" style="width:${val}%"></div></div></td>
+    </tr>`).join("")
+  + `<tr>
+      <td style="color:var(--t2)">平均来院頻度</td>
+      <td style="font-weight:600">${avgFreq?avgFreq+"日に1回":"—"}</td>
+      <td></td>
+    </tr>`;
+
+  // 各スタッフの新規数一覧（新規数の多い順）
+  const nvRows = [];
+  STORES_MASTER.forEach(s=>{
+    const d = Object.values(ALL_DATA).find(x=>x.storeName===s.name);
+    if(!d) return;
+    s.staff.forEach(st=>{
+      const sd = d.staffDetail?.[st];
+      if(!sd) return;
+      nvRows.push({st, store:s.name, visitors: sd.totalVisitors||0});
+    });
+  });
+  nvRows.sort((a,b)=>b.visitors-a.visitors);
+  const maxV = nvRows[0]?.visitors || 1;
+  document.getElementById("ov-newvisitor-tbody").innerHTML = nvRows.map(({st,store,visitors})=>`
+    <tr>
+      <td style="font-weight:600">${st}</td>
+      <td style="font-size:11px;color:var(--t2)">${store}</td>
+      <td style="font-weight:700;font-size:14px">${visitors}<span style="font-size:11px;color:var(--t2);font-weight:400">名</span></td>
+      <td style="width:120px"><div class="bar"><div class="bf" style="width:${Math.round(visitors/maxV*100)}%"></div></div></td>
+    </tr>`).join("") || "<tr><td colspan='4' style='color:var(--t3);font-size:12px'>データなし</td></tr>";
+}
+
+
+
+// ============================================================
+// 店舗・スタッフ別
+// ============================================================
+function buildStoreBtns(){
+  const el=document.getElementById("store-btns");
+  el.innerHTML=STORES_MASTER.map(s=>{
+    const hasData=Object.values(ALL_DATA).some(d=>d.storeName===s.name);
+    return `<div class="sc${hasData?"":" sc-nodata"}" onclick="showStore('${s.name}',this)">
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-sub">${s.staff.join("・")}</div>
+    </div>`;
+  }).join("");
+}
+
+function showStore(name, btn){
+  document.querySelectorAll(".sg .sc").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  const s=STORES_MASTER.find(x=>x.name===name);
+  const d=Object.values(ALL_DATA).find(x=>x.storeName===name);
+  const el=document.getElementById("store-detail");
+  if(!d){el.innerHTML=`<p class="err-box">この店舗のデータが取得できていません。GAS設定タブでURLを登録・確認してください。</p>`;return;}
+  const isMulti=s.staff.length>1;
+  let html="";
+  if(isMulti){
+    html+=`<div class="stab" id="stab">`;
+    html+=`<button class="st on" onclick="showPanel('sp-total',this)">店舗合計</button>`;
+    s.staff.forEach(st=>{ html+=`<button class="st" onclick="showPanel('sp-${st}',this)">${st}</button>`; });
+    html+="</div>";
+    html+=storeTotalPanel(s,d);
+    s.staff.forEach(st=>{html+=staffPanel(st,s,d,false);});
+  } else {
+    html+=staffPanel(s.staff[0],s,d,true);
+  }
+  el.innerHTML=html;
+  if(isMulti) document.getElementById("sp-total").style.display="block";
+}
+
+function showPanel(id,btn){
+  document.querySelectorAll("#stab .st").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  document.querySelectorAll(".sp").forEach(p=>p.style.display="none");
+  document.getElementById(id).style.display="block";
+}
+
+function storeTotalPanel(s,d){
+  const t=d.storeTotal;
+  return `<div class="sp" id="sp-total" style="display:none">
+  <div class="card"><div class="ct">${s.name} — 店舗合計</div>
+  <div class="g4">
+    <div class="m"><div class="ml">消費売上</div><div class="mv">${fmtM(t.sales.consume)}</div></div>
+    <div class="m"><div class="ml">販売売上</div><div class="mv">${fmtM(t.sales.product)}</div></div>
+    <div class="m"><div class="ml">次回予約率</div><div class="mv">${t.nextAppt.rate}<span class="mu">%</span></div></div>
+    <div class="m"><div class="ml">トライアル成約率</div><div class="mv">${t.trial.rate}<span class="mu">%</span></div></div>
+  </div>
+  <div class="g3">
+    ${metricCard("トライアル",t.trial)}
+    ${couponCard(t.coupon)}
+    ${maintCard(t.maint)}
+  </div>
+  </div></div>`;
+}
+
+function staffPanel(st, s, d, solo){
+  const sd=d.staffDetail?.[st];
+  if(!sd) return "";
+  const id=solo?`sp-solo-${st}`:`sp-${st}`;
+  const routeTotal=Object.values(sd.routes).reduce((a,b)=>a+b,0)||1;
+  return `<div class="sp" id="${id}" style="${solo?"display:block":"display:none"}">
+  <div class="card"><div class="ct">${st}（${s.name}）</div>
+  <div class="g4">
+    <div class="m"><div class="ml">販売売上</div><div class="mv">${fmtM(sd.sales.product)}</div></div>
+    <div class="m"><div class="ml">消費売上</div><div class="mv">${fmtM(sd.sales.consume)}</div></div>
+    <div class="m"><div class="ml">次回予約率</div><div class="mv">${sd.nextAppt.rate}<span class="mu">%</span></div><div class="ms">${sd.nextAppt.yes}/${sd.nextAppt.total}名</div></div>
+    <div class="m"><div class="ml">平均来院頻度</div><div class="mv">${sd.avgFreqDays||"—"}<span class="mu">${sd.avgFreqDays?"日に1回":""}</span></div></div>
+  </div>
+  <div class="g3">
+    ${metricCard("トライアル",sd.trial)}
+    ${couponCard(sd.coupon)}
+    ${maintCard(sd.maint)}
+  </div>
+  <div style="margin-top:4px"><div class="ct" style="font-size:12px">来院経路</div>
+  <div class="rg">${ROUTE_KEYS.map(k=>{const v=sd.routes[k]||0;return `<div class="ri"><div class="rn">${v}</div><div class="rl">${k}</div><div class="rp">${Math.round(v/routeTotal*100)}%</div></div>`;}).join("")}</div>
+  </div>
+  </div></div>`;
+}
+
+function metricCard(title,obj){
+  return `<div class="card" style="margin:0"><div class="ct" style="font-size:12px">${title}</div>
+  <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${obj.proposed}</td></tr>
+  <tr><td style="color:var(--t2)">成約数</td><td style="text-align:right;font-weight:700">${obj.closed}</td></tr>
+  <tr><td style="color:var(--t2)">成約率</td><td style="text-align:right">${badge(obj.rate,[70,55])}</td></tr></table></div>`;
+}
+function couponCard(c){
+  return `<div class="card" style="margin:0"><div class="ct" style="font-size:12px">回数券</div>
+  <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${c.proposed}</td></tr>
+  <tr><td style="color:var(--t2)">購入数</td><td style="text-align:right;font-weight:700">${c.closed}</td></tr>
+  <tr><td style="color:var(--t2)">購入率</td><td style="text-align:right">${badge(c.rate,[70,55])}</td></tr>
+  <tr><td style="color:var(--t2)">成約比率</td><td style="text-align:right"><span class="bg b">${c.ratio}%</span></td></tr>
+  ${c.breakdown?`<tr><td colspan="2" style="font-size:10px;color:var(--t3)">4回:${c.breakdown["4回券"]} / 8回:${c.breakdown["8回券"]} / 12回:${c.breakdown["12回券"]}</td></tr>`:""}
+  </table></div>`;
+}
+function maintCard(m){
+  const typeStr=Object.entries(m.types||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(" / ")||"—";
+  return `<div class="card" style="margin:0"><div class="ct" style="font-size:12px">メンテナンス移行</div>
+  <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${m.proposed}</td></tr>
+  <tr><td style="color:var(--t2)">移行数</td><td style="text-align:right;font-weight:700">${m.closed}</td></tr>
+  <tr><td style="color:var(--t2)">移行率</td><td style="text-align:right">${badge(m.rate,[65,50])}</td></tr>
+  <tr><td style="color:var(--t2)">比率</td><td style="text-align:right"><span class="bg b">${m.ratio||0}%</span></td></tr>
+  <tr><td colspan="2" style="font-size:10px;color:var(--t3)">${typeStr}</td></tr></table></div>`;
+}
+
+// ============================================================
+// 来院経路
+// ============================================================
+function buildRouteFilters(){
+  const rs=document.getElementById("r-store");
+  const rst=document.getElementById("r-staff");
+  rs.innerHTML="<option value='all'>全店舗</option>";
+  rst.innerHTML="<option value='all'>全員</option>";
+  STORES_MASTER.forEach(s=>{
+    if(!Object.values(ALL_DATA).some(d=>d.storeName===s.name)) return;
+    const o=document.createElement("option");o.value=s.name;o.textContent=s.name;rs.appendChild(o);
+  });
+  Object.values(ALL_DATA).forEach(d=>{
+    Object.keys(d.staffDetail||{}).forEach(st=>{
+      const o=document.createElement("option");o.value=st;o.textContent=`${st}（${d.storeName}）`;rst.appendChild(o);
+    });
+  });
+}
+
+function updateRouteView(){
+  const store=document.getElementById("r-store").value;
+  const staff=document.getElementById("r-staff").value;
+
+  // 対象スタッフデータ収集
+  const sdList=[];
+  Object.values(ALL_DATA).forEach(d=>{
+    if(store!=="all" && d.storeName!==store) return;
+    Object.entries(d.staffDetail||{}).forEach(([st,sd])=>{
+      if(staff!=="all" && st!==staff) return;
+      sdList.push(sd);
+    });
+  });
+
+  // ===== 来院経路 =====
+  const routes={};ROUTE_KEYS.forEach(k=>routes[k]=0);
+  sdList.forEach(sd=>ROUTE_KEYS.forEach(k=>routes[k]+=(sd.routes[k]||0)));
+  const routeTotal=Object.values(routes).reduce((a,b)=>a+b,0)||1;
+
+  document.getElementById("r-route-grid").innerHTML=ROUTE_KEYS.map(k=>{
+    const v=routes[k];const p=Math.round(v/routeTotal*100);
+    return `<div class="ri"><div class="rn">${v}</div><div class="rl">${k}</div><div class="rp">${p}%</div></div>`;
+  }).join("");
+
+  if(routeInst) routeInst.destroy();
+  routeInst=new Chart(document.getElementById("routeBarChart"),{
+    type:"bar",
+    data:{labels:ROUTE_KEYS,datasets:[{label:"件数",data:ROUTE_KEYS.map(k=>routes[k]),backgroundColor:ROUTE_COLORS,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:"rgba(0,0,0,.06)"}}}}
+  });
+
+  // ===== 共通：人数・割合・成約率の行を作る関数 =====
+  function makeRows(keys, statKey, totalPersons){
+    // 各キーの合算
+    const agg={};
+    keys.forEach(k=>agg[k]={total:0,closed:0});
+    sdList.forEach(sd=>{
+      const stats=sd[statKey]||{};
+      keys.forEach(k=>{
+        if(stats[k]){
+          agg[k].total  += stats[k].total  || 0;
+          agg[k].closed += stats[k].closed || 0;
+        }
+      });
+    });
+    const grandTotal = keys.reduce((s,k)=>s+agg[k].total,0) || 1;
+    return keys.map(k=>{
+      const v   = agg[k];
+      const pct = Math.round(v.total / grandTotal * 100);
+      const rate= v.total>0 ? Math.round(v.closed/v.total*100) : 0;
+      return `<tr>
+        <td style="font-weight:500">${k}</td>
+        <td style="text-align:right;font-weight:700">${v.total}<span style="font-size:10px;color:var(--t2)">名</span></td>
+        <td style="text-align:right"><span class="bg b">${pct}%</span></td>
+        <td style="text-align:right">${v.total>0?badge(rate,[70,55]):"<span style='color:var(--t3)'>—</span>"}</td>
+        <td><div class="bar"><div class="bf" style="width:${rate}%"></div></div></td>
+      </tr>`;
+    }).join("");
+  }
+
+  // ===== 年齢別 =====
+  const AGE_KEYS=["20代","30代","40代","50代","60代","70代以上"];
+  document.getElementById("age-tbody").innerHTML=makeRows(AGE_KEYS,"ageStats");
+
+  // ===== お悩み別 =====
+  const CONCERN_KEYS=["肩こり","首こり","姿勢の悪さ","骨盤の歪み","腰痛","眼性疲労","膝痛","五重肩","神経痛"];
+  document.getElementById("concern-tbody").innerHTML=makeRows(CONCERN_KEYS,"concernStats");
+
+  // ===== 性別別 =====
+  document.getElementById("gender-tbody").innerHTML=makeRows(["男","女"],"genderStats");
+
+  // ===== 経路別成約率 =====
+  // 来院件数はroutes、成約率はconcernStats等と同様にrouteConvRateから合算
+  const rconvAgg={};
+  ROUTE_KEYS.forEach(k=>rconvAgg[k]={total:routes[k],closed:0});
+  sdList.forEach(sd=>{
+    ROUTE_KEYS.forEach(k=>{
+      if(sd.routeConvRate&&sd.routeConvRate[k]){
+        rconvAgg[k].closed+=(sd.routeConvRate[k].closed||0);
+      }
+    });
+  });
+  document.getElementById("rconv-tbody").innerHTML=ROUTE_KEYS.map(k=>{
+    const v=rconvAgg[k];
+    const pct=Math.round(v.total/routeTotal*100);
+    const rate=v.total>0?Math.round(v.closed/v.total*100):0;
+    const hasConv=sdList.some(sd=>sd.routeConvRate&&sd.routeConvRate[k]&&sd.routeConvRate[k].total>0);
+    return `<tr>
+      <td style="font-weight:500">${k}</td>
+      <td style="text-align:right;font-weight:700">${v.total}<span style="font-size:10px;color:var(--t2)">名</span></td>
+      <td style="text-align:right"><span class="bg b">${pct}%</span></td>
+      <td style="text-align:right">${hasConv?badge(rate,[70,55]):"<span style='color:var(--t3)'>—</span>"}</td>
+      <td><div class="bar"><div class="bf" style="width:${hasConv?rate:0}%"></div></div></td>
+    </tr>`;
+  }).join("");
+}
+
+// ============================================================
+// クロス分析
+// ============================================================
+function buildStaffBtns(){
+  const el=document.getElementById("staff-btns");
+  const allStaff=[];
+  Object.values(ALL_DATA).forEach(d=>Object.keys(d.staffDetail||{}).forEach(st=>{if(!allStaff.includes(st))allStaff.push(st);}));
+  selectedStaff=new Set(allStaff);
+  el.innerHTML=allStaff.map(st=>`<button class="st on" onclick="toggleStaff('${st}',this)">${st}</button>`).join("");
+  updateCrossTable();
+}
+
+function toggleAllStaff(btn){
+  const el=document.getElementById("staff-btns");
+  const allBtns=[...el.querySelectorAll(".st")];
+  const allSel=allBtns.every(b=>b.classList.contains("on"));
+  if(allSel){selectedStaff.clear();allBtns.forEach(b=>b.classList.remove("on"));}
+  else{allBtns.forEach(b=>{b.classList.add("on");selectedStaff.add(b.textContent);});}
+  updateCrossTable();
+}
+function toggleStaff(st,btn){
+  if(selectedStaff.has(st)){selectedStaff.delete(st);btn.classList.remove("on");}
+  else{selectedStaff.add(st);btn.classList.add("on");}
+  updateCrossTable();
+}
+
+function updateCrossTable(){
+  const rows=[];
+  Object.values(ALL_DATA).forEach(d=>{
+    Object.entries(d.staffDetail||{}).forEach(([st,sd])=>{
+      if(!selectedStaff.has(st)) return;
+      const rTotal=Object.values(sd.routes).reduce((a,b)=>a+b,0)||1;
+      rows.push({st,store:d.storeName,sd,rTotal});
+    });
+  });
+
+  document.getElementById("cross-tbody").innerHTML=rows.map(({st,store,sd,rTotal})=>{
+    const freq = sd.avgFreqText || "—";
+    return `<tr>
+      <td style="font-weight:700">${st}</td>
+      <td style="font-size:11px;color:var(--t2)">${store}</td>
+      <td>${sd.totalVisitors||0}</td>
+      <td>${badge(sd.nextAppt.rate,[75,65])}</td>
+      <td>${badge(sd.trial.rate,[70,55])}</td>
+      <td>${badge(sd.coupon.rate,[70,55])}</td>
+      <td>${badge(sd.maint.rate,[65,50])}</td>
+      <td style="font-size:11px">${freq}</td>
+      <td style="font-size:11px">${fmtM(sd.sales.product)}</td>
+      <td style="font-size:11px">${fmtM(sd.sales.consume)}</td>
+    </tr>`;
+  }).join("")||"<tr><td colspan='10' class='load-box'>スタッフを選択してください</td></tr>";
+
+  // ランキング生成
+  buildRankings(rows);
+
+
+}
+
+// ============================================================
+// ランキング生成
+// ============================================================
+function buildRankings(rows){
+  const medals = ["🥇","🥈","🥉"];
+
+  function rankRows(sorted, valFn, fmtFn, tbodyId){
+    document.getElementById(tbodyId).innerHTML = sorted.map(({st,store,sd},i)=>{
+      const medal = i<3 ? medals[i] : `${i+1}位`;
+      return `<tr>
+        <td style="font-weight:700;font-size:13px">${medal}</td>
+        <td style="font-weight:600">${st}</td>
+        <td style="font-size:11px;color:var(--t2)">${store}</td>
+        <td>${fmtFn(valFn(sd))}</td>
+      </tr>`;
+    }).join("") || "<tr><td colspan='4' style='color:var(--t3);font-size:12px'>データなし</td></tr>";
+  }
+
+  // トライアル成約率
+  const byTrial = [...rows].sort((a,b)=>(b.sd.trial?.rate||0)-(a.sd.trial?.rate||0));
+  rankRows(byTrial, sd=>sd.trial?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-trial");
+
+  // 回数券購入率
+  const byCoupon = [...rows].sort((a,b)=>(b.sd.coupon?.rate||0)-(a.sd.coupon?.rate||0));
+  rankRows(byCoupon, sd=>sd.coupon?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-coupon");
+
+  // メンテ移行率
+  const byMaint = [...rows].sort((a,b)=>(b.sd.maint?.rate||0)-(a.sd.maint?.rate||0));
+  rankRows(byMaint, sd=>sd.maint?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-maint");
+
+  // 販売売上
+  const byProduct = [...rows].sort((a,b)=>(b.sd.sales?.product||0)-(a.sd.sales?.product||0));
+  rankRows(byProduct, sd=>sd.sales?.product||0, v=>fmtM(v), "rank-product");
+
+  // 消費売上
+  const byConsume = [...rows].sort((a,b)=>(b.sd.sales?.consume||0)-(a.sd.sales?.consume||0));
+  rankRows(byConsume, sd=>sd.sales?.consume||0, v=>fmtM(v), "rank-consume");
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function badge(v,thr){
+  const cls=v>=thr[0]?"g":v>=thr[1]?"a":"r";
+  return `<span class="bg ${cls}">${v}%</span>`;
+}
+function fmtM(v){
+  if(!v) return "—";
+  // 10円単位で3桁カンマ区切り表示
+  const rounded = Math.round(v / 10) * 10;
+  return "¥" + rounded.toLocaleString("ja-JP") + "円";
+}
+
+function showPage(name,btn){
+  document.querySelectorAll(".pg").forEach(p=>p.classList.remove("on"));
+  document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
+  document.getElementById("pg-"+name).classList.add("on");
+  btn.classList.add("on");
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+(function initSelectors(){
+  const now = new Date();
+  const curYear  = now.getFullYear();
+  const curMonth = now.getMonth()+1;
+  const ySel = document.getElementById("yearSel");
+  for(let y=2026; y<=curYear+1; y++){
+    const o=document.createElement("option");
+    o.value=y; o.textContent=y+"年";
+    if(y===curYear) o.selected=true;
+    ySel.appendChild(o);
+  }
+  const mSel = document.getElementById("monthSel");
+  [...mSel.options].forEach(o=>{
+    if(o.value==curMonth) o.selected=true;
+  });
+})();
+
+// URLを直接埋め込み（共有用）
+GAS_URLS = [
+  {name:"大阪玉造",   url:"https://script.google.com/macros/s/AKfycbydsVwE2NM63SFDBE7e0E8OjIM6K1YT83DVbjKBsWj3dJy3WTfE8aURMImGh2emnq97/exec"},
+  {name:"大和西大寺", url:"https://script.google.com/macros/s/AKfycby8ra_J_B1KMkk23c8_XeEGfeXyiuKn3rOCz8vcvuZH6jDU8tVCY6hBZP7PUK_zGojS1w/exec"},
+  {name:"姫路",       url:"https://script.google.com/macros/s/AKfycbwxnlPuQpIgaSyoerugODx1NTovmETtbW-8xaYX3tOkDph6hhwwOCke_RnrPMeZpgwy/exec"},
+  {name:"中百舌鳥",   url:"https://script.google.com/macros/s/AKfycbz_blp--JFDhdNOWshEjsF5GiLdqNWpyz3rmUvDBYQWuUodDPw_QCPTv_t_7vTqUy-tiw/exec"},
+  {name:"三国ヶ丘",   url:"https://script.google.com/macros/s/AKfycbxPofjWMz67EbkvLnoXtXnMRaCQE2-OOmc0JhXA29B_XFnYp4b4wme0gqonp6AXbolZoA/exec"},
+  {name:"心斎橋",     url:"https://script.google.com/macros/s/AKfycbxTeWpn0JBtP60JcdoM2ZcsD2BK_5QvvGLFyjOzYKEazaXb6tgxQVt6RGM0xIwEcxDKLQ/exec"},
+  {name:"大阪茨木",   url:"https://script.google.com/macros/s/AKfycbwv7T-Q8BzN9amuz56J2Rm8ews12SK7mJMFkj84wPyiogbyFJBSCZ534pyDG6NVoWqHgw/exec"},
+  {name:"豊中",       url:"https://script.google.com/macros/s/AKfycbxpO5VIeEKpP4cF-9BRXUVyUwYk52fuUiAG1rq7N-Dy4jQ5n8Qm4njoRs-LFns0NAx9/exec"},
+  {name:"柏",         url:"https://script.google.com/macros/s/AKfycbxC_2x-kJBOTzmDzuiBewGlGtnUaJmXG1y1n8KbmdNYk6FKo_3wXhHy8p45FdQmLrYDmg/exec"},
+  {name:"鹿児島",     url:"https://script.google.com/macros/s/AKfycbwWsiyXx3lxVLGma5gwa5WtBHBynghPgihuRFswhGCBNOVtodOyOFYhqkDI6aqxVVu9Pw/exec"},
+  {name:"塚口",       url:"https://script.google.com/macros/s/AKfycbyO0fNvOML9E9bBIR2naVEuk7rUwGmlA5KGVlfNpI8uxmRGmsH4npeZsEJekAborn8O1A/exec"},
+];
+renderUrlList();
+reloadAll();
+</script>
+</body>
+</html>
