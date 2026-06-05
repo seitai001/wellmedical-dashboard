@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WellVoice Manager — 育成担当者用</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --t50:#E1F5EE;--t100:#9FE1CB;--t200:#5DCAA5;--t400:#1D9E75;--t600:#0F6E56;--t900:#085041;
+  --g50:#F8F9F7;--g100:#F1EFE8;--g200:#D3D1C7;--g400:#888780;--g600:#5F5E5A;--g800:#2C2C2A;
+  --amber:#EF9F27;--coral:#D85A30;--blue:#378ADD;--red:#E24B4A;
+  --bd:rgba(0,0,0,0.07);--sf:#fff;--bg:#F7F8F5;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--g800);font-size:13px;line-height:1.7;}
+
+/* ヘッダー */
+.hd{background:var(--t900);color:#fff;padding:0 1.5rem;height:52px;display:flex;align-items:center;gap:10px;}
+.hd-logo{font-size:17px;font-weight:700;color:var(--t100);letter-spacing:-.5px;}
+.hd-sub{font-size:11px;color:rgba(255,255,255,.45);border-left:1px solid rgba(255,255,255,.2);padding-left:10px;}
+.hd-badge{margin-left:auto;font-size:10px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;color:rgba(255,255,255,.7);}
+
+/* レイアウト */
+.wrap{max-width:1080px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:300px 1fr;gap:1.25rem;align-items:start;}
+@media(max-width:900px){.wrap{grid-template-columns:1fr;}}
+.left{display:flex;flex-direction:column;gap:1rem;}
+.right{display:flex;flex-direction:column;gap:1rem;}
+
+/* カード */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.ch{padding:.875rem 1.125rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;}
+.ch h2{font-size:12px;font-weight:500;color:var(--g600);letter-spacing:.3px;flex:1;}
+.ci{width:22px;height:22px;background:var(--t50);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.cb{padding:1.125rem;}
+
+/* フォーム */
+.fl{font-size:10px;font-weight:500;color:var(--g400);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;}
+select,input[type=text]{width:100%;padding:7px 9px;border:1px solid var(--bd);border-radius:7px;font-family:inherit;font-size:12px;color:var(--g800);background:var(--g50);outline:none;transition:border-color .15s;}
+select:focus,input[type=text]:focus{border-color:var(--t400);background:#fff;}
+textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:7px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.9;color:var(--g600);background:var(--g50);resize:vertical;outline:none;transition:border-color .15s;min-height:180px;}
+textarea:focus{border-color:var(--t400);background:#fff;}
+textarea::placeholder{color:var(--g400);font-style:italic;}
+
+/* ボタン */
+.btn-run{width:100%;padding:11px;background:var(--t600);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-run:hover{background:var(--t900);transform:translateY(-1px);}
+.btn-run:disabled{background:var(--g200);color:var(--g400);cursor:not-allowed;transform:none;}
+.btn-save{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-save:hover{background:#2166aa;transform:translateY(-1px);}
+.btn-save:disabled{background:var(--g200);color:var(--g400);cursor:not-allowed;transform:none;}
+
+/* ヒント */
+.hint{background:var(--t50);border:1px solid var(--t100);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t600);line-height:1.6;}
+
+/* 空画面 */
+.empty{padding:2.5rem 1rem;text-align:center;color:var(--g400);}
+.empty-ico{font-size:36px;opacity:.35;margin-bottom:10px;}
+
+/* ローディング */
+.lov{display:none;position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.lov.show{display:flex;}
+.spin{width:44px;height:44px;border:3px solid var(--t50);border-top-color:var(--t400);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.lov-step{font-size:13px;color:var(--t600);font-weight:500;}
+.lov-sub{font-size:11px;color:var(--g400);}
+.lov-progress{width:200px;height:4px;background:var(--g200);border-radius:2px;overflow:hidden;margin-top:4px;}
+.lov-bar{height:100%;background:var(--t400);border-radius:2px;transition:width .5s ease;width:0%;}
+
+/* 結果タブ */
+.tabs{display:flex;border-bottom:1px solid var(--bd);background:var(--g50);overflow-x:auto;}
+.tb{padding:9px 14px;font-size:11px;font-weight:500;color:var(--g400);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.tb.on{color:var(--t600);border-bottom-color:var(--t400);background:var(--sf);}
+.tpanel{display:none;padding:1.125rem;}
+.tpanel.on{display:block;}
+
+/* スコア */
+.sov{display:grid;grid-template-columns:auto 1fr;gap:1.25rem;align-items:center;padding:1.25rem;}
+.scirc{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sin{width:62px;height:62px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.snum{font-size:24px;font-weight:700;color:var(--t600);line-height:1;}
+.sden{font-size:9px;color:var(--g400);}
+.sbadge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;}
+
+/* フェーズスコア */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.pcard{background:var(--g50);border-radius:8px;padding:.75rem;border:1px solid var(--bd);}
+.pbar-track{height:5px;background:var(--g200);border-radius:3px;overflow:hidden;margin-top:6px;}
+.pbar-fill{height:100%;border-radius:3px;transition:width 1.2s ease;}
+
+/* チェックリスト */
+.clphase{margin-bottom:1.25rem;}
+.clphase-hd{font-size:11px;font-weight:700;color:var(--t600);padding:5px 0;border-bottom:1px solid var(--t50);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.clitem{display:flex;align-items:flex-start;gap:9px;padding:6px 8px;border-radius:7px;margin-bottom:3px;}
+.clcheck{flex-shrink:0;width:18px;height:18px;border-radius:4px;border:1.5px solid var(--g200);display:flex;align-items:center;justify-content:center;margin-top:1px;font-size:10px;}
+.clcheck.ok{background:var(--t400);border-color:var(--t400);color:#fff;}
+.clcheck.ng{background:#FDF4F1;border-color:#F0997B;color:var(--coral);}
+.clcheck.na{background:var(--g100);border-color:var(--g200);color:var(--g400);}
+.cltext{font-size:12px;color:var(--g600);flex:1;line-height:1.5;}
+.cltext.ng{color:var(--coral);}
+.clnote{font-size:10px;color:var(--g400);margin-top:2px;font-style:italic;}
+
+/* フィードバック */
+.ftag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:7px;}
+.tg-good{background:var(--t50);color:var(--t600);}
+.tg-imp{background:#FAECE7;color:#993C1D;}
+.tg-act{background:#E6F1FB;color:#185FA5;}
+.fitem{display:flex;gap:9px;padding:9px 11px;border-radius:7px;margin-bottom:5px;font-size:12px;line-height:1.6;}
+.fitem.good{background:#F2FAF6;border-left:3px solid var(--t200);}
+.fitem.imp{background:#FDF4F1;border-left:3px solid #F0997B;}
+.fitem.act{background:#EEF5FC;border-left:3px solid var(--blue);}
+.fdot{flex-shrink:0;width:5px;height:5px;border-radius:50%;margin-top:6px;}
+.fitem.good .fdot{background:var(--t400);}
+.fitem.imp .fdot{background:var(--coral);}
+.fitem.act .fdot{background:var(--blue);}
+
+/* 会話記録 */
+.txbox{background:var(--g50);border-radius:7px;padding:12px 14px;font-size:12px;font-family:'DM Mono',monospace;line-height:2.1;color:var(--g600);max-height:600px;overflow-y:auto;white-space:pre-wrap;border:1px solid var(--bd);}
+.tx-line{display:block;padding:2px 0;}
+.tx-s{color:var(--t600);font-weight:500;}
+.tx-p{color:var(--g800);}
+.tx-meta{font-size:10px;color:var(--g400);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd);}
+
+/* NG・名前 */
+.ngbox{background:#FDF4F1;border:1px solid #F0997B;border-radius:7px;padding:.75rem 1rem;margin-bottom:.75rem;}
+.ngbox-hd{font-size:11px;font-weight:700;color:var(--coral);margin-bottom:6px;}
+.ngitem{font-size:12px;color:#993C1D;padding:3px 0;display:flex;gap:6px;}
+.okbox{background:var(--t50);border:1px solid var(--t100);border-radius:7px;padding:.6rem 1rem;font-size:11px;color:var(--t600);margin-bottom:.75rem;}
+
+/* 保存ステータス */
+.save-status{font-size:11px;text-align:center;min-height:16px;padding:4px 0;}
+.doc-link{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--blue);text-decoration:none;padding:6px 12px;background:#EEF5FC;border-radius:6px;margin-top:6px;}
+.doc-link:hover{background:#ddeaf8;}
+
+canvas{display:block;margin:0 auto;}
+/* 音声アップロード */
+.upz{border:1.5px dashed var(--t200);border-radius:9px;padding:1rem;text-align:center;background:var(--t50);transition:all .15s;}
+.upz:hover,.upz.dragging{border-color:var(--t600);background:#d0ede4;}
+.upz-label{display:block;cursor:pointer;width:100%;}
+.upz-label input[type=file]{display:none;}
+.audio-player-wrap{background:var(--g50);border:1px solid var(--bd);border-radius:9px;padding:.875rem 1rem;display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.audio-player-wrap audio{width:100%;border-radius:6px;outline:none;}
+/* 音声＋テキスト同時確認レイアウト */
+.split-view{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:700px){.split-view{grid-template-columns:1fr;}}
+.split-audio{display:flex;flex-direction:column;gap:8px;}
+.split-tx{display:flex;flex-direction:column;gap:6px;}
+
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-logo">WellVoice</div>
+  <div class="hd-sub">育成担当者用 添削システム — ウェルメディカル整体院</div>
+  <div class="hd-badge">Manager</div>
+</div>
+
+<div class="wrap">
+  <!-- 左：入力パネル -->
+  <div class="left">
+
+    <!-- セッション情報 -->
+    <div class="card">
+      <div class="ch"><div class="ci">🏥</div><h2>セッション情報</h2></div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div class="fl">スタッフ名</div>
+          <input type="text" id="staffName" placeholder="例：田中 優子" />
+        </div>
+        <div>
+          <div class="fl">店舗</div>
+          <select id="storeName">
+            <option value="">店舗を選択</option>
+            <option>本町院</option><option>梅田院</option><option>心斎橋院</option>
+            <option>難波院</option><option>天王寺院</option><option>その他</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 音声ファイル -->
+    <div class="card">
+      <div class="ch"><div class="ci">🎵</div><h2>音声ファイル（任意）</h2></div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:9px;">
+        <div class="upz" id="audioUpz"
+          ondragover="event.preventDefault();this.classList.add('dragging')"
+          ondragleave="this.classList.remove('dragging')"
+          ondrop="handleAudioDrop(event)">
+          <label class="upz-label" for="audioFileInput">
+            <div style="font-size:22px;margin-bottom:4px;">📱</div>
+            <div style="font-size:12px;color:var(--t600);font-weight:500;">タップしてファイルを選択</div>
+            <div style="font-size:10px;color:var(--g400);margin-top:3px;">MP3・M4A・WAV・CAF・AAC 対応</div>
+            <div style="margin-top:8px;"><span style="display:inline-block;padding:6px 16px;background:var(--t400);color:#fff;border-radius:20px;font-size:11px;font-weight:700;">📂 ファイルを選ぶ</span></div>
+            <input type="file" id="audioFileInput" accept=".mp3,.m4a,.wav,.caf,.aac,.webm,.ogg,.mp4,.3gp" onchange="handleAudioFile(this)" />
+          </label>
+          <div style="font-size:11px;color:var(--t600);font-weight:500;margin-top:6px;min-height:14px;" id="audioFname"></div>
+        </div>
+        <div id="audioPreview" style="display:none;">
+          <div class="audio-player-wrap">
+            <div style="font-size:11px;font-weight:500;color:var(--g600);">🎵 <span id="audioFileLabel"></span></div>
+            <audio id="audioPlayer" controls></audio>
+          </div>
+          <div style="font-size:10px;color:var(--g400);text-align:center;margin-top:4px;">保存時にGoogleドライブに自動アップロードされます</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 会話テキスト -->
+    <div class="card">
+      <div class="ch"><div class="ci">📝</div><h2>会話テキスト</h2></div>
+      <div class="cb" style="display:flex;flex-direction:column;gap:9px;">
+        <div>
+          <div class="fl" style="display:flex;justify-content:space-between;">
+            <span>文字起こしテキストをペースト</span>
+            <span id="charCount" style="font-size:10px;color:var(--g400);">0文字</span>
+          </div>
+          <textarea id="tx" rows="12"
+            placeholder="スタッフ：いらっしゃいませ！&#10;患者：はい…&#10;&#10;文字起こしをここに貼り付けてください。"
+            oninput="updateCount()"></textarea>
+        </div>
+        <div class="hint">💡 テキストが空のまま分析するとデモデータで動作確認できます。</div>
+      </div>
+    </div>
+
+    <button class="btn-run" id="runBtn" onclick="runAnalysis()">✨ AI添削・フィードバック生成</button>
+
+    <!-- 保存ボタン（分析後に表示） -->
+    <div id="saveArea" style="display:none;display:flex;flex-direction:column;gap:6px;">
+      <button class="btn-save" id="saveBtn" onclick="saveSession()">💾 スプレッドシートに保存 ＋ Googleドキュメント作成</button>
+      <div class="save-status" id="saveStatus"></div>
+    </div>
+
+  </div>
+
+  <!-- 右：結果パネル -->
+  <div class="right" id="right">
+    <div class="card" id="emptyCard">
+      <div class="empty">
+        <div class="empty-ico">🏥</div>
+        <div style="font-size:13px;">会話テキストを貼り付けて<br>AI添削を開始してください</div>
+        <div style="font-size:11px;color:var(--g400);margin-top:8px;">チェックリスト41項目・4フェーズで評価</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ローディング -->
+<div class="lov" id="lov">
+  <div class="spin"></div>
+  <div class="lov-step" id="lovStep">処理中...</div>
+  <div class="lov-sub" id="lovSub"></div>
+  <div class="lov-progress"><div class="lov-bar" id="lovBar"></div></div>
+</div>
+
+<script>
+// ============================================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxuWBF60inXQpqMwQ6xOUBHNX5dScvugdB_i9dfcofnLAE4uKeN9rzSaU5_CwLBiTD5mA/exec';
+// ============================================================
+
+const DEMO = `スタッフ：いらっしゃいませ！ご予約の田中様でお間違いないでしょうか？
+患者：はい、そうです。
+スタッフ：ありがとうございます！お待ちしておりました！そちらのスリッパに履き替えていただき、靴は棚にお入れください。
+患者：はい。
+スタッフ：それではこちらにどうぞ。本日担当いたします鈴木と申します！よろしくお願いいたします。本日初回となりますので、こちら問診票のご記入をお願いいたします。少しでも気になる箇所は全てチェックをお願いします！書き終わりましたらお声がけください。
+患者：はい、わかりました。
+スタッフ：ありがとうございます！確認しますので少々お待ちください。お待たせいたしました！それでは田中さん、こちらへどうぞ。
+患者：はい。
+スタッフ：改めまして、本日施術を担当します整体師の鈴木と申します。よろしくお願いします！本日初回の流れなんですが、まずお悩みを伺い、AIで姿勢分析を行い、施術後に効果確認とご案内という形で、トータル1時間ほどいただきます。この後のお時間は大丈夫でしょうか？
+患者：はい、大丈夫です。
+スタッフ：ありがとうございます！では早速なんですが、問診票に肩こりと腰痛を書いていただいてましたが、1番気になるのはどちらですか？
+患者：腰が一番つらいですね。もう半年以上続いてて。
+スタッフ：半年以上ですか、それはつらかったですね。何か思い当たるきっかけはありますか？
+患者：デスクワークが増えたのが原因かなと。
+スタッフ：なるほど、長時間座っていることで腰への負担が蓄積されているんですね。整形外科などには行かれましたか？
+患者：一度行ったんですが湿布をもらっただけで。
+スタッフ：そうですか。湿布で根本的な改善は難しいですよね。実は腰痛の原因って、姿勢の歪みと深く関係していることが多いんです。今からAIを使って姿勢を詳しく分析しますね。田中さん、身長を教えていただけますか？
+患者：168センチです。
+スタッフ：ありがとうございます。では正面に向いて立っていただき、踵をつけてつま先を少し開いてください。撮りますね。次は横を向いてください。
+患者：はい。
+スタッフ：ありがとうございます！では椅子に座っていただいて、肩の動きを確認します。ゆっくりバンザイしてみてください。詰まり感や痛みはありますか？
+患者：右肩が少し詰まります。
+スタッフ：右肩ですね。なんとなく覚えておいてください。では立ち上がっていただいて、前屈してみましょう。腰の痛みはどうですか？
+患者：腰が少し痛いですね。
+スタッフ：今の痛み、なんとなくで覚えておいてください。こちらがAI分析の結果です。田中さんの場合、スコアが50点で、合格点の目安が90点です。体が歪む原因は大きく3つありまして、まず日常生活の悪い癖で体幹の筋力が低下します。次に体幹が弱くなると骨格の歪みが出て、最後に筋肉が引っ張られて硬くなり痛みが出てきます。田中さんの腰痛もこのパターンです。本日の施術は筋肉の硬さと骨格の歪みにアプローチします。よろしいですか？
+患者：はい、お願いします。
+スタッフ：一度良い姿勢を作ってみますね。この姿勢で腰を回してみましょう。さっきより動きやすくないですか？
+患者：確かに少し動きやすいです。
+スタッフ：それだけ骨盤の歪みが影響しているんです。では施術に入ります。
+患者：はい。
+スタッフ：田中さん、先ほどの腰痛、趣味やスポーツはされていますか？
+患者：週末にゴルフをしています。
+スタッフ：ゴルフですか！腰の回旋がよく使いますよね。姿勢が改善するとスイングも変わってきますよ。では施術後の確認をします。前屈してみましょう。腰の痛みはどうですか？
+患者：だいぶ楽になりました！
+スタッフ：よかったです！田中さん、一緒に確認しましょう！ビフォーアフター写真を並べてみると、骨盤が立って背筋も伸びてますよね。ただ今日の効果は一時的なもので、時間が経つと戻ってしまいます。12回のプログラムで根本改善できます。まず3回トライアルから始めませんか？1週間に1回が理想ですが、田中さんはその頻度で来られますか？
+患者：うーん、2週間に1回くらいなら。
+スタッフ：わかりました。田中さんの腰痛を改善して、ゴルフも楽しんでいただけるようサポートします！いかがされますか？
+患者：そしたらお願いします。
+スタッフ：ありがとうございます！では次回は来週の水曜か木曜、または土曜はいかがでしょうか？
+患者：木曜日でお願いします。
+スタッフ：田中さん、本日はありがとうございました！次回木曜日お待ちしてますね！お気をつけてお帰りください！`;
+
+let lastResult = null;
+let audioBlob   = null;   // アップロードされた音声Blobそのもの
+let currentAudioSrc = ''; // プレビュー用ObjectURL
+
+
+// ============================================================
+// 音声ファイル操作
+// ============================================================
+function handleAudioFile(input) {
+  const f = input.files[0];
+  if (f) setAudioFile(f);
+}
+function handleAudioDrop(e) {
+  e.preventDefault();
+  document.getElementById('audioUpz').classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if (f) setAudioFile(f);
+}
+function setAudioFile(f) {
+  audioBlob = f;
+  currentAudioSrc = URL.createObjectURL(f);
+  document.getElementById('audioPlayer').src = currentAudioSrc;
+  document.getElementById('audioFileLabel').textContent = f.name + ' (' + (f.size/1024/1024).toFixed(1) + 'MB)';
+  document.getElementById('audioFname').textContent = '📎 ' + f.name;
+  document.getElementById('audioPreview').style.display = 'block';
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+function updateCount() {
+  const len = document.getElementById('tx').value.length;
+  document.getElementById('charCount').textContent = len.toLocaleString() + '文字';
+}
+
+function setLoading(show, step, sub, pct) {
+  const lov = document.getElementById('lov');
+  if (show) {
+    lov.classList.add('show');
+    document.getElementById('lovStep').textContent = step || '処理中...';
+    document.getElementById('lovSub').textContent = sub || '';
+    document.getElementById('lovBar').style.width = (pct || 0) + '%';
+  } else {
+    lov.classList.remove('show');
+  }
+}
+
+// ============================================================
+// Claude 分析
+// ============================================================
+async function runAnalysis() {
+  const staff = document.getElementById('staffName').value || '（未入力）';
+  const store = document.getElementById('storeName').value || '（未選択）';
+  let tx = document.getElementById('tx').value.trim();
+  if (!tx) tx = DEMO;
+
+  setLoading(true, '✨ AIが会話を分析中...', 'チェックリスト41項目を評価しています', 30);
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('saveArea').style.display = 'none';
+
+  const prompt = `あなたはウェルメディカル整体院のスーパーバイザーです。
+以下の新規患者対応の会話記録を評価してください。
+
+スタッフ名: ${staff} / 店舗: ${store}
+
+【会話記録（文字起こし全文）】
+${tx}
+
+【チェックリスト41項目（フェーズ別）】
+事前準備〜カウンセリング（8項目）: 1.入室時に笑顔かつ先手でお名前呼んで挨拶 2.緊張感をほぐすコミュニケーション 3.カウンセリングシート渡す際の声掛け 29.初回の流れ説明と時間確認 4.来店目的の把握 5.1番の悩みの把握 6.悩みへの共感・相槌・おうむ返し 7.断言する言葉を使用
+写真撮影・説明（10項目）: 8.姿勢確認（悩みの原因が姿勢から） 9.姿勢と症状の関連性を伝えた 10.AI分析する旨を伝えた 11.写真撮影時の指示 12.動作確認で痛み・つっぱり・詰まりを確認 13.AI結果を元に現状と関連性を説明 14.全身矯正の案内（クーポン切替） 15.良い姿勢を作り維持の難しさを体感 16.良い姿勢で動かし変化の予兆を実感 17.姿勢と動きの関連性を説明
+施術中（11項目）: 18.お客様の名前を12回以上呼んだ 19.適度に体感確認 20.施術中に主訴がどう変わるか伝えた 21.主訴の原因追及ヒアリング・アドバイス 22.施術者主体で主導権を握った 23.体の変化を細く伝えた 24.痛くないか細かく確認 25.体の変化が趣味・仕事にどう良い影響か伝えた 26.お悩み以外のベネフィットを伝えた 27.お客様を褒めた 28.体・悩みに関する内容で話の展開
+再検査〜会計（12項目）: 30.ビフォーアフター写真で変化説明 31.主訴がどう変わっていくかイメージを伝えた 32.再度良い姿勢で「楽に作れる」を体感 33.変化を一緒に喜び共感 34.頻度・期間のネガティブを解消 35.トライアルを用意している理由を説明 36.トライアルの意味合いを理解してもらえた 37.「改善します」と言い切った 38.「もしよかったら」を使っていない 39.「いかがされますか？」と自信持って聞けた 40.「どうしていきたいとかありますか？」を使っていない 41.次回予約を曜日指定してこちら主体で誘導
+
+【評価ルール】
+- result: 確認できた="ok" / できていない="ng" / 判断不可="na"
+- noteはngのみ20字以内の改善コメント、それ以外は空文字
+- NGフレーズ検出: 「もしよかったら」「どうしていきたいとかありますか」「かもしれない」「たぶん」「どうしますか」
+
+以下のJSON形式のみで返してください（前置き・バッククォート不要）:
+{
+  "totalScore": <0-100整数>,
+  "grade": <"S"|"A"|"B"|"C"|"D">,
+  "gradeLabel": <"優秀"|"良好"|"標準"|"要改善"|"要指導">,
+  "summary": <100字以内>,
+  "phaseScores": {
+    "事前準備〜カウンセリング": {"score":<0-100>,"comment":<30字以内>},
+    "写真撮影・説明": {"score":<0-100>,"comment":<30字以内>},
+    "施術中": {"score":<0-100>,"comment":<30字以内>},
+    "再検査〜会計": {"score":<0-100>,"comment":<30字以内>}
+  },
+  "checklist": {
+    "事前準備〜カウンセリング": [
+      {"id":1,"text":"入室時に笑顔かつ先手でお名前呼んで挨拶","result":"ok","note":""},
+      {"id":2,"text":"緊張感をほぐすコミュニケーション","result":"ok","note":""},
+      {"id":3,"text":"カウンセリングシートの声掛け","result":"ok","note":""},
+      {"id":29,"text":"初回の流れ説明と時間確認","result":"ok","note":""},
+      {"id":4,"text":"来店目的の把握","result":"ok","note":""},
+      {"id":5,"text":"1番の悩みの把握","result":"ok","note":""},
+      {"id":6,"text":"悩みへの共感・相槌・おうむ返し","result":"ok","note":""},
+      {"id":7,"text":"断言する言葉を使用","result":"ok","note":""}
+    ],
+    "写真撮影・説明": [
+      {"id":8,"text":"姿勢確認（悩みの原因が姿勢から）","result":"ok","note":""},
+      {"id":9,"text":"姿勢と症状の関連性を説明","result":"ok","note":""},
+      {"id":10,"text":"AI分析する旨を伝えた","result":"ok","note":""},
+      {"id":11,"text":"写真撮影時の指示","result":"ok","note":""},
+      {"id":12,"text":"動作確認で痛み・つっぱり・詰まりを確認","result":"ok","note":""},
+      {"id":13,"text":"AI結果で現状と関連性を説明","result":"ok","note":""},
+      {"id":14,"text":"全身矯正の案内（クーポン切替）","result":"na","note":""},
+      {"id":15,"text":"良い姿勢で維持の難しさを体感","result":"ok","note":""},
+      {"id":16,"text":"良い姿勢で動かし変化の予兆を実感","result":"ok","note":""},
+      {"id":17,"text":"姿勢と動きの関連性を説明","result":"ok","note":""}
+    ],
+    "施術中": [
+      {"id":18,"text":"お客様の名前を12回以上呼んだ","result":"ok","note":""},
+      {"id":19,"text":"適度に体感確認","result":"ok","note":""},
+      {"id":20,"text":"主訴がどう変わるか伝えた","result":"ok","note":""},
+      {"id":21,"text":"主訴の原因追及ヒアリング","result":"ok","note":""},
+      {"id":22,"text":"施術者主体で主導権を握った","result":"ok","note":""},
+      {"id":23,"text":"体の変化を細く伝えた","result":"ok","note":""},
+      {"id":24,"text":"痛くないか細かく確認","result":"ok","note":""},
+      {"id":25,"text":"体の変化が趣味・仕事に良い影響を伝えた","result":"ok","note":""},
+      {"id":26,"text":"お悩み以外のベネフィットを伝えた","result":"ok","note":""},
+      {"id":27,"text":"お客様を褒めた","result":"ng","note":"もっと積極的に褒める場面を作る"},
+      {"id":28,"text":"体・悩みに関する内容で話の展開","result":"ok","note":""}
+    ],
+    "再検査〜会計": [
+      {"id":30,"text":"ビフォーアフター写真で変化説明","result":"ok","note":""},
+      {"id":31,"text":"主訴がどう変わるかイメージを伝えた","result":"ok","note":""},
+      {"id":32,"text":"再度良い姿勢で「楽に作れる」を体感","result":"ok","note":""},
+      {"id":33,"text":"変化を一緒に喜び共感","result":"ok","note":""},
+      {"id":34,"text":"頻度・期間のネガティブを解消","result":"ok","note":""},
+      {"id":35,"text":"トライアルを用意している理由を説明","result":"ok","note":""},
+      {"id":36,"text":"トライアルの意味合いを理解してもらえた","result":"ok","note":""},
+      {"id":37,"text":"「改善します」と言い切った","result":"ok","note":""},
+      {"id":38,"text":"「もしよかったら」を使っていない","result":"ok","note":""},
+      {"id":39,"text":"「いかがされますか？」と自信持って聞けた","result":"ok","note":""},
+      {"id":40,"text":"「どうしていきたいとかありますか？」を使っていない","result":"ok","note":""},
+      {"id":41,"text":"次回予約を曜日指定してこちら主体で誘導","result":"ok","note":""}
+    ]
+  },
+  "ngPhrases": [],
+  "nameCount": <整数>,
+  "goodPoints": [<60字以内×3〜4個>],
+  "improvements": [<「×〜 ○〜」形式70字以内×3〜4個>],
+  "actionItems": [<45字以内×2〜3個>]
+}`;
+
+  try {
+    setLoading(true, '✨ AIが会話を分析中...', 'フィードバックを生成しています', 60);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const txt = data.content.map(b => b.text || '').join('');
+    const match = txt.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('JSONが取得できませんでした');
+    setLoading(true, '結果を表示中...', '', 90);
+    const r = JSON.parse(match[0]);
+    lastResult = r;
+    renderResult(r, staff, store, tx);
+  } catch(e) {
+    alert('分析エラー: ' + e.message);
+    console.error(e);
+  } finally {
+    setLoading(false);
+    document.getElementById('runBtn').disabled = false;
+  }
+}
+
+// ============================================================
+// 結果描画
+// ============================================================
+function renderResult(r, staff, store, rawTx) {
+  document.getElementById('emptyCard').style.display = 'none';
+  document.querySelectorAll('.res-card').forEach(e => e.remove());
+
+  const phases = Object.keys(r.phaseScores);
+  const phaseCards = phases.map(ph => {
+    const ps = r.phaseScores[ph];
+    const col = pColor(ps.score);
+    return `<div class="pcard">
+      <div style="font-size:10px;color:var(--g400);margin-bottom:4px;display:flex;justify-content:space-between;">
+        <span>${ph}</span><span style="font-weight:700;color:${col};">${ps.score}点</span>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:${col};font-family:'DM Mono',monospace;">${ps.score}<span style="font-size:10px;color:var(--g400);">/100</span></div>
+      <div class="pbar-track"><div class="pbar-fill" data-w="${ps.score}" style="width:0;background:${col};"></div></div>
+      <div style="font-size:10px;color:var(--g400);margin-top:4px;">${ps.comment}</div>
+    </div>`;
+  }).join('');
+
+  const ngBox = r.ngPhrases && r.ngPhrases.length > 0
+    ? `<div class="ngbox"><div class="ngbox-hd">⚠ NGフレーズ検出（${r.ngPhrases.length}件）</div>${r.ngPhrases.map(ng=>`<div class="ngitem"><span>✗</span><span>${escHtml(ng)}</span></div>`).join('')}</div>`
+    : `<div class="okbox">✅ NGフレーズの検出なし</div>`;
+
+  const nameBox = r.nameCount >= 12
+    ? `<div class="okbox">✅ お名前を推定 <strong>${r.nameCount}回</strong> 呼べています（目標12回以上達成）</div>`
+    : `<div class="ngbox"><div class="ngbox-hd">お名前を呼んだ回数：推定 ${r.nameCount}回（目標12回以上）</div><div class="ngitem"><span>▶</span><span>施術中・説明中にもっと積極的にお名前を呼びましょう</span></div></div>`;
+
+  const lines = rawTx.split('\n');
+  const txLineHtml = lines.map(l => {
+    const isStaff = l.startsWith('スタッフ') || l.startsWith('施術者') || l.startsWith('先生');
+    return `<span class="tx-line ${isStaff ? 'tx-s' : 'tx-p'}">${escHtml(l)}</span>`;
+  }).join('');
+
+  const html = `
+<div class="res-card card">
+  <div class="tabs">
+    <button class="tb on" onclick="sw(this,'t0')">📊 総合評価</button>
+    <button class="tb" onclick="sw(this,'t1')">✅ チェックリスト</button>
+    <button class="tb" onclick="sw(this,'t2')">💬 フィードバック</button>
+    <button class="tb" onclick="sw(this,'t3')">🎵 音声＋会話記録</button>
+  </div>
+
+  <div class="tpanel on" id="t0">
+    <div class="sov">
+      <div class="scirc" id="scirc" style="background:conic-gradient(var(--t400) 0%,var(--t50) 0%);">
+        <div class="sin"><div class="snum" id="snum">0</div><div class="sden">/ 100</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="font-size:10px;color:var(--g400);">${escHtml(staff)}｜${escHtml(store)}</div>
+        <div style="font-size:15px;font-weight:700;">${r.gradeLabel}</div>
+        <div class="sbadge" style="${gStyle(r.grade)}">Grade ${r.grade}</div>
+        <div style="font-size:11px;color:var(--g400);margin-top:4px;line-height:1.6;">${escHtml(r.summary)}</div>
+      </div>
+    </div>
+    <div style="padding:0 1.125rem 1.125rem;">
+      <div style="font-size:11px;font-weight:500;color:var(--g600);margin-bottom:8px;">フェーズ別スコア</div>
+      <div class="pgrid">${phaseCards}</div>
+      <canvas id="rc" width="300" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="tpanel" id="t1">
+    ${nameBox}${ngBox}
+    ${renderChecklist(r.checklist)}
+  </div>
+
+  <div class="tpanel" id="t2">
+    <div style="margin-bottom:1rem;"><div class="ftag tg-good">✅ 良かった点</div>${r.goodPoints.map(p=>`<div class="fitem good"><div class="fdot"></div><div>${escHtml(p)}</div></div>`).join('')}</div>
+    <div style="margin-bottom:1rem;"><div class="ftag tg-imp">⚡ 改善ポイント</div>${r.improvements.map(p=>`<div class="fitem imp"><div class="fdot"></div><div>${escHtml(p)}</div></div>`).join('')}</div>
+    <div><div class="ftag tg-act">🎯 アクションプラン</div>${r.actionItems.map(p=>`<div class="fitem act"><div class="fdot"></div><div>${escHtml(p)}</div></div>`).join('')}</div>
+  </div>
+
+  <div class="tpanel" id="t3">
+    <div class="split-view">
+      <div class="split-audio">
+        <div style="font-size:11px;font-weight:500;color:var(--g600);margin-bottom:6px;">🎵 音声再生</div>
+        ${currentAudioSrc
+          ? `<div class="audio-player-wrap">
+               <audio controls src="${currentAudioSrc}" style="width:100%;"></audio>
+               <div style="font-size:10px;color:var(--g400);">音声を聴きながら右側のテキストと照らし合わせてください</div>
+             </div>`
+          : `<div style="background:var(--g50);border:1px dashed var(--g200);border-radius:9px;padding:1.5rem;text-align:center;color:var(--g400);font-size:11px;">
+               音声ファイルが<br>アップロードされていません
+             </div>`
+        }
+      </div>
+      <div class="split-tx">
+        <div style="font-size:11px;font-weight:500;color:var(--g600);margin-bottom:6px;">📝 会話テキスト（${lines.length}行・${rawTx.length.toLocaleString()}文字）</div>
+        <div class="txbox" style="flex:1;">${txLineHtml}</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+  document.getElementById('right').insertAdjacentHTML('afterbegin', html);
+
+  // スコアアニメーション
+  let cur = 0; const tgt = r.totalScore;
+  const el = document.getElementById('snum');
+  const circ = document.getElementById('scirc');
+  const ti = setInterval(() => {
+    cur = Math.min(cur + 2, tgt);
+    el.textContent = cur;
+    circ.style.background = `conic-gradient(#1D9E75 ${cur*3.6}deg,#E1F5EE ${cur*3.6}deg)`;
+    if (cur >= tgt) clearInterval(ti);
+  }, 18);
+  setTimeout(() => { document.querySelectorAll('.pbar-fill').forEach(b => { b.style.width = b.dataset.w + '%'; }); }, 150);
+  setTimeout(() => drawRadar(r), 300);
+  document.getElementById('right').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // 保存エリア表示
+  document.getElementById('saveArea').style.display = 'flex';
+  document.getElementById('saveArea').style.flexDirection = 'column';
+  document.getElementById('saveArea').style.gap = '6px';
+  document.getElementById('saveBtn').disabled = false;
+  document.getElementById('saveBtn').textContent = '💾 スプレッドシートに保存 ＋ Googleドキュメント作成';
+  document.getElementById('saveStatus').textContent = '';
+}
+
+// ============================================================
+// GAS 保存
+// ============================================================
+async function saveSession() {
+  if (!lastResult) return;
+  const staff = document.getElementById('staffName').value || '（未入力）';
+  const store = document.getElementById('storeName').value || '（未選択）';
+  const tx    = document.getElementById('tx').value.trim();
+
+  const btn    = document.getElementById('saveBtn');
+  const status = document.getElementById('saveStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ 保存中...';
+  status.textContent = '';
+  status.style.color = 'var(--g400)';
+
+  try {
+    // 音声ファイルがあればGASへBase64送信
+    let audioFileId = '', audioFileName = '';
+    if (audioBlob) {
+      btn.textContent = '⏳ 音声ファイルをアップロード中...';
+      const b64  = await blobToBase64(audioBlob);
+      const fname = audioBlob instanceof File ? audioBlob.name : 'recording.webm';
+      const aRes  = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveAudio', data: b64, mimeType: audioBlob.type || 'audio/webm', fileName: fname })
+      });
+      const aData = await aRes.json();
+      if (aData.ok) { audioFileId = aData.fileId; audioFileName = aData.fileName; }
+      btn.textContent = '⏳ フィードバックデータを保存中...';
+    }
+
+    const payload = {
+      action: 'saveSession',
+      staff, store,
+      transcript: tx,
+      audioFileId, audioFileName,
+      ...lastResult
+    };
+
+    const res  = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '保存失敗');
+
+    btn.textContent = '✅ 保存完了！';
+    status.style.color = 'var(--t600)';
+
+    const docLink = data.docUrl
+      ? `<a class="doc-link" href="${data.docUrl}" target="_blank">📄 Googleドキュメントを開く ↗</a>`
+      : '';
+    status.innerHTML = `✅ スプレッドシートに保存・ドキュメント作成完了！<br>${docLink}`;
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '💾 スプレッドシートに保存 ＋ Googleドキュメント作成';
+    status.style.color = 'var(--coral)';
+    status.textContent = '❌ 保存エラー: ' + e.message;
+    console.error(e);
+  }
+}
+
+// ============================================================
+// チェックリスト・グラフ・ユーティリティ
+// ============================================================
+function renderChecklist(cl) {
+  return Object.entries(cl).map(([phase, items]) => {
+    const ok  = items.filter(i => i.result === 'ok').length;
+    const tot = items.filter(i => i.result !== 'na').length;
+    const pct = tot > 0 ? Math.round(ok / tot * 100) : 0;
+    const col = pColor(pct);
+    const rows = items.map(it => {
+      const ico = it.result === 'ok' ? '✓' : it.result === 'ng' ? '✗' : '−';
+      const cls = it.result === 'ok' ? 'ok' : it.result === 'ng' ? 'ng' : 'na';
+      return `<div class="clitem">
+        <div class="clcheck ${cls}">${ico}</div>
+        <div>
+          <div class="cltext ${it.result === 'ng' ? 'ng' : ''}">${it.id}. ${it.text}</div>
+          ${it.note ? `<div class="clnote">▶ ${it.note}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="clphase">
+      <div class="clphase-hd">${phase}<span style="font-size:10px;font-family:'DM Mono',monospace;color:${col};">${ok}/${tot}項目 (${pct}%)</span></div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function drawRadar(r) {
+  const cv = document.getElementById('rc'); if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, cx = W/2, cy = H/2+8, R = Math.min(W,H)*.34;
+  const short = ["事前準備","写真・説明","施術中","再検査〜会計"];
+  const vals  = Object.values(r.phaseScores).map(p => p.score / 100);
+  const N = vals.length;
+  ctx.clearRect(0, 0, W, H);
+  for (let ring = 1; ring <= 4; ring++) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const a = (i/N)*2*Math.PI - Math.PI/2;
+      const r2 = R * ring / 4;
+      i === 0 ? ctx.moveTo(cx+r2*Math.cos(a), cy+r2*Math.sin(a)) : ctx.lineTo(cx+r2*Math.cos(a), cy+r2*Math.sin(a));
+    }
+    ctx.closePath(); ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  for (let i = 0; i < N; i++) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+R*Math.cos(a), cy+R*Math.sin(a));
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.stroke();
+  }
+  ctx.beginPath();
+  for (let i = 0; i < N; i++) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    const r2 = R * vals[i];
+    i === 0 ? ctx.moveTo(cx+r2*Math.cos(a), cy+r2*Math.sin(a)) : ctx.lineTo(cx+r2*Math.cos(a), cy+r2*Math.sin(a));
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(29,158,117,0.15)'; ctx.fill();
+  ctx.strokeStyle = '#1D9E75'; ctx.lineWidth = 2; ctx.stroke();
+  for (let i = 0; i < N; i++) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    const r2 = R * vals[i];
+    ctx.beginPath(); ctx.arc(cx+r2*Math.cos(a), cy+r2*Math.sin(a), 4, 0, 2*Math.PI);
+    ctx.fillStyle = '#1D9E75'; ctx.fill();
+  }
+  ctx.fillStyle = '#5F5E5A'; ctx.font = '9.5px Noto Sans JP,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < N; i++) {
+    const a = (i/N)*2*Math.PI - Math.PI/2;
+    ctx.fillText(short[i], cx+(R+24)*Math.cos(a), cy+(R+24)*Math.sin(a));
+  }
+}
+
+function sw(btn, id) {
+  btn.closest('.card').querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+  btn.closest('.card').querySelectorAll('.tpanel').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+
+function gStyle(g) {
+  return {S:'background:#085041;color:#fff',A:'background:#1D9E75;color:#fff',B:'background:#378ADD;color:#fff',C:'background:#EF9F27;color:#fff',D:'background:#D85A30;color:#fff'}[g] || '';
+}
+function pColor(s) { return s >= 80 ? '#1D9E75' : s >= 60 ? '#EF9F27' : '#E24B4A'; }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
