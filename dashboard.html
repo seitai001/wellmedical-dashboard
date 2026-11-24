@@ -136,37 +136,64 @@ tr:hover td{background:var(--s2)}
 
 /* ========== スマホ対応 ========== */
 @media(max-width:600px){
+  /* ヘッダー */
   .hd{padding:0 12px;height:auto;min-height:54px;flex-wrap:wrap;gap:6px;padding-top:8px;padding-bottom:8px}
   .hd-logo{font-size:13px}
   .hd-logo em{font-size:10px;padding:1px 6px}
   .hd-r{gap:6px;flex-wrap:wrap}
   .period-sel{padding:4px 6px;font-size:11px}
   .sync-btn{padding:4px 10px;font-size:11px}
+
+  /* ナビ：横スクロール */
   .nav{padding:0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .nb{padding:10px 12px;font-size:12px;white-space:nowrap;flex-shrink:0}
+
+  /* メイン */
   .main{padding:12px}
+
+  /* グリッド：全部1列に */
   .g4,.g3,.g2{grid-template-columns:1fr;gap:8px}
+
+  /* カード */
   .card{padding:12px 14px;margin-bottom:10px}
   .ct{font-size:12px}
+
+  /* メトリクス */
   .mv{font-size:20px}
   .g4.metrics-row{grid-template-columns:repeat(2,1fr)}
+
+  /* テーブル：横スクロール */
   .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{font-size:11px}
   th{padding:6px 8px;font-size:10px}
   td{padding:6px 8px}
+
+  /* 店舗グリッド */
   .sg{grid-template-columns:repeat(3,1fr);gap:6px}
   .sc{padding:8px 6px}
   .sc-name{font-size:11px}
+
+  /* 経路グリッド */
   .rg{grid-template-columns:repeat(2,1fr);gap:6px}
   .rn{font-size:16px}
+
+  /* フィルターバー */
   .fb{flex-direction:column;align-items:flex-start;gap:6px;padding:8px 10px}
   .fb select{width:100%;font-size:12px}
+
+  /* スタッフタブ */
   .stab{gap:4px}
   .st{font-size:11px;padding:3px 10px}
+
+  /* 分析テーブル */
   .analysis-table{font-size:11px}
   .analysis-table th,.analysis-table td{padding:6px 8px}
   .col-bar{display:none}
+
+  /* ランキングテーブル */
   .g3.rank-grid{grid-template-columns:1fr}
+
+  /* GAS設定 */
   .setup{padding:14px}
   .url-input{font-size:11px}
 }
@@ -305,6 +332,7 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
 </div>
+
 <!-- ====== クロス分析 ====== -->
 <div class="pg" id="pg-cross">
   <div class="card">
@@ -398,7 +426,7 @@ tr:hover td{background:var(--s2)}
 // ============================================================
 // データストア
 // ============================================================
-const STORES_MASTER = [
+const STORES_ALL = [
   {id:"yamato",     name:"大和西大寺", staff:["松田","小谷"]},
   {id:"himeji",     name:"姫路",       staff:["橘","永吉"]},
   {id:"naka",       name:"中百舌鳥",   staff:["小西"]},
@@ -411,6 +439,10 @@ const STORES_MASTER = [
   {id:"matsudo",     name:"松戸",       staff:["目黒"]},
   {id:"neyagawa",    name:"寝屋川",     staff:["辻"]},
 ];
+function activeStores(){
+  const ym=curYM();
+  return STORES_ALL.filter(s=>storeVisible(s.name,ym)).map(s=>({...s, staff:s.staff.filter(st=>staffVisible(s.name,st,ym))}));
+}
 const ROUTE_KEYS = ["ホットペッパー","マップ検索","ホームページ","チラシ","インスタ","紹介","看板","その他"];
 const ROUTE_COLORS = ["#1D9E75","#378ADD","#BA7517","#D4537E","#7F77DD","#D85A30","#639922","#888780"];
 
@@ -451,6 +483,67 @@ function renderUrlList(){
 // ============================================================
 // GASからデータ取得
 // ============================================================
+
+// ============================================================
+// 表示期間ルール（退店・退職したスタッフ/店舗を指定月以降だけ非表示）
+// until = 最後に表示する月（YYYYMM）。それより後の月を選ぶと非表示
+// ============================================================
+const PERIOD_RULES = {
+  stores: {
+    "豊中": { until: 202609 },            // 令和8年10月〜 非表示
+  },
+  staff: {
+    "大阪玉造": { "三木": { until: 202609 } }, // 令和8年10月〜 非表示
+    "大阪茨木": { "前田": { until: 202608 } }, // 令和8年9月〜 非表示
+  },
+};
+function curYM(){
+  return parseInt(document.getElementById("yearSel").value)*100 + parseInt(document.getElementById("monthSel").value);
+}
+function storeVisible(storeName, ym){
+  const r = PERIOD_RULES.stores[storeName];
+  return !(r && ym > r.until);
+}
+function staffVisible(storeName, staff, ym){
+  const r = (PERIOD_RULES.staff[storeName]||{})[staff];
+  return !(r && ym > r.until);
+}
+// 非表示スタッフを除外し、店舗合計を残ったスタッフで再計算
+function applyPeriodRules(d, ym){
+  const keep = (d.staff||[]).filter(st=>staffVisible(d.storeName, st, ym));
+  if (keep.length === (d.staff||[]).length) return d;
+  const detail = {};
+  keep.forEach(st=>{ if(d.staffDetail&&d.staffDetail[st]) detail[st]=d.staffDetail[st]; });
+  d.staff = keep;
+  d.staffDetail = detail;
+  d.storeTotal = rebuildTotal(Object.values(detail));
+  return d;
+}
+function rebuildTotal(list){
+  const pctf=(n,dn)=>dn>0?Math.round(n/dn*100):0;
+  const sumObj=(key)=>{ const o={}; list.forEach(sd=>Object.entries(sd[key]||{}).forEach(([k,v])=>o[k]=(o[k]||0)+(v||0))); return o; };
+  const sumStat=(key)=>{ const o={}; list.forEach(sd=>Object.entries(sd[key]||{}).forEach(([k,v])=>{ o[k]=o[k]||{total:0,closed:0,rate:0}; o[k].total+=v.total||0; o[k].closed+=v.closed||0; })); Object.values(o).forEach(v=>v.rate=pctf(v.closed,v.total)); return o; };
+  const s=(f)=>list.reduce((a,sd)=>a+(f(sd)||0),0);
+  const t={
+    totalVisitors: s(sd=>sd.totalVisitors),
+    nextAppt:{ yes:s(sd=>sd.nextAppt?.yes), total:s(sd=>sd.nextAppt?.total) },
+    trial:{ proposed:s(sd=>sd.trial?.proposed), closed:s(sd=>sd.trial?.closed) },
+    coupon:{ proposed:s(sd=>sd.coupon?.proposed), closed:s(sd=>sd.coupon?.closed), breakdown:(()=>{const o={};list.forEach(sd=>Object.entries(sd.coupon?.breakdown||{}).forEach(([k,v])=>o[k]=(o[k]||0)+v));return o;})() },
+    maint:{ proposed:s(sd=>sd.maint?.proposed), closed:s(sd=>sd.maint?.closed), types:(()=>{const o={};list.forEach(sd=>Object.entries(sd.maint?.types||{}).forEach(([k,v])=>o[k]=(o[k]||0)+v));return o;})() },
+    routes: sumObj("routes"),
+    ageStats: sumStat("ageStats"), genderStats: sumStat("genderStats"),
+    concernStats: sumStat("concernStats"), routeConvRate: sumStat("routeConvRate"),
+    sales:{ product:s(sd=>sd.sales?.product), consume:s(sd=>sd.sales?.consume) },
+  };
+  t.nextAppt.rate=pctf(t.nextAppt.yes,t.nextAppt.total);
+  t.trial.rate=pctf(t.trial.closed,t.trial.proposed);
+  t.coupon.rate=pctf(t.coupon.closed,t.coupon.proposed);
+  t.coupon.ratio=pctf(t.coupon.closed,t.trial.closed);
+  t.maint.rate=pctf(t.maint.closed,t.maint.proposed);
+  t.maint.ratio=pctf(t.maint.closed,t.trial.closed);
+  return t;
+}
+
 async function reloadAll(){
   setSyncState("loading","取得中...");
   const year  = parseInt(document.getElementById("yearSel").value);
@@ -459,12 +552,13 @@ async function reloadAll(){
 
   ALL_DATA = {};
   let errCount = 0;
-  await Promise.all(GAS_URLS.map(async ({name,url})=>{
+  const ym = year*100+month;
+  await Promise.all(GAS_URLS.filter(u=>storeVisible(u.name, ym)).map(async ({name,url})=>{
     try {
       const res = await fetch(url+params);
       const json = await res.json();
       if (json.error) { errCount++; console.error(name, json.error); }
-      else ALL_DATA[json.storeId||name] = json;
+      else ALL_DATA[json.storeId||name] = applyPeriodRules(json, ym);
     } catch(e){ errCount++; console.error(name,e); }
   }));
 
@@ -475,13 +569,65 @@ async function reloadAll(){
   refreshAll();
 }
 
+// 複数月のデータを合算する
+function mergeMonthlyData(dataList){
+  if(dataList.length === 1) return dataList[0];
+  const base = JSON.parse(JSON.stringify(dataList[0]));
+
+  dataList.slice(1).forEach(d=>{
+    // storeTotal合算
+    mergeMetrics(base.storeTotal, d.storeTotal);
+    // staffDetail合算
+    Object.keys(d.staffDetail||{}).forEach(st=>{
+      if(base.staffDetail[st]) mergeMetrics(base.staffDetail[st], d.staffDetail[st]);
+    });
+  });
+
+  // 率を再計算
+  recalcRates(base.storeTotal);
+  Object.values(base.staffDetail||{}).forEach(sd => recalcRates(sd));
+  return base;
+}
+
+function mergeMetrics(a, b){
+  a.totalVisitors        = (a.totalVisitors||0)        + (b.totalVisitors||0);
+  a.nextAppt.yes         = (a.nextAppt.yes||0)         + (b.nextAppt.yes||0);
+  a.nextAppt.total       = (a.nextAppt.total||0)       + (b.nextAppt.total||0);
+  a.trial.proposed       = (a.trial.proposed||0)       + (b.trial.proposed||0);
+  a.trial.closed         = (a.trial.closed||0)         + (b.trial.closed||0);
+  a.coupon.proposed      = (a.coupon.proposed||0)      + (b.coupon.proposed||0);
+  a.coupon.closed        = (a.coupon.closed||0)        + (b.coupon.closed||0);
+  a.maint.proposed       = (a.maint.proposed||0)       + (b.maint.proposed||0);
+  a.maint.closed         = (a.maint.closed||0)         + (b.maint.closed||0);
+  a.sales.consume        = (a.sales.consume||0)        + (b.sales.consume||0);
+  a.sales.product        = (a.sales.product||0)        + (b.sales.product||0);
+  const RKEYS = ["ホットペッパー","マップ検索","ホームページ","チラシ","インスタ","紹介","看板","その他"];
+  RKEYS.forEach(k=>{ a.routes[k]=(a.routes[k]||0)+(b.routes[k]||0); });
+  Object.keys(b.coupon.breakdown||{}).forEach(k=>{
+    a.coupon.breakdown[k]=(a.coupon.breakdown[k]||0)+(b.coupon.breakdown[k]||0);
+  });
+  Object.keys(b.maint.types||{}).forEach(k=>{
+    a.maint.types[k]=(a.maint.types[k]||0)+(b.maint.types[k]||0);
+  });
+}
+
+function recalcRates(d){
+  d.nextAppt.rate = d.nextAppt.total>0 ? Math.round(d.nextAppt.yes/d.nextAppt.total*100) : 0;
+  d.trial.rate    = d.trial.proposed>0 ? Math.round(d.trial.closed/d.trial.proposed*100) : 0;
+  d.coupon.rate   = d.coupon.proposed>0? Math.round(d.coupon.closed/d.coupon.proposed*100): 0;
+  d.coupon.ratio  = d.trial.closed>0   ? Math.round(d.coupon.closed/d.trial.closed*100)  : 0;
+  d.maint.rate    = d.maint.proposed>0 ? Math.round(d.maint.closed/d.maint.proposed*100) : 0;
+  d.maint.ratio   = d.trial.closed>0   ? Math.round(d.maint.closed/d.trial.closed*100)   : 0;
+}
+
 function setSyncState(state,label){
   const dot = document.getElementById("syncDot");
   const lbl = document.getElementById("syncLabel");
   dot.className = "dot "+state;
   lbl.textContent = label;
 }
-  // ============================================================
+
+// ============================================================
 // 全ビュー更新
 // ============================================================
 function refreshAll(){
@@ -523,7 +669,7 @@ function buildOverview(){
 
   // テーブル
   let rows="";
-  STORES_MASTER.forEach(s=>{
+  activeStores().forEach(s=>{
     const d = Object.values(ALL_DATA).find(x=>x.storeName===s.name);
     if(!d) return;
     const t=d.storeTotal;
@@ -542,6 +688,7 @@ function buildOverview(){
       rows+=`<td>${badge(sd.coupon.rate,[70,55])}</td>`;
       rows+=`<td>${badge(sd.maint.rate,[65,50])}</td>`;
       rows+=`<td style="font-size:11px">${sd.avgFreqText||"—"}</td>`;
+      // スタッフ別売上
       rows+=`<td style="font-size:11px">${fmtM(sd.sales.product)}</td>`;
       rows+=`<td style="font-size:11px">${fmtM(sd.sales.consume)}</td>`;
       if(isFirst){
@@ -577,6 +724,7 @@ function buildOverview(){
   const avgCoupon    = Math.round(allStaffData.reduce((s,sd)=>s+(sd.coupon?.rate||0),0)/cnt);
   const avgMaint     = Math.round(allStaffData.reduce((s,sd)=>s+(sd.maint?.rate||0),0)/cnt);
 
+  // 平均来院頻度（avgFreqTextから日数を抽出して平均）
   const freqNums = allStaffData.map(sd=>{
     const t = sd.avgFreqText||"";
     const m = t.match(/(\d+(\.\d+)?)\s*日/);
@@ -605,7 +753,7 @@ function buildOverview(){
 
   // 各スタッフの新規数一覧（新規数の多い順）
   const nvRows = [];
-  STORES_MASTER.forEach(s=>{
+  activeStores().forEach(s=>{
     const d = Object.values(ALL_DATA).find(x=>x.storeName===s.name);
     if(!d) return;
     s.staff.forEach(st=>{
@@ -625,12 +773,14 @@ function buildOverview(){
     </tr>`).join("") || "<tr><td colspan='4' style='color:var(--t3);font-size:12px'>データなし</td></tr>";
 }
 
+
+
 // ============================================================
 // 店舗・スタッフ別
 // ============================================================
 function buildStoreBtns(){
   const el=document.getElementById("store-btns");
-  el.innerHTML=STORES_MASTER.map(s=>{
+  el.innerHTML=activeStores().map(s=>{
     const hasData=Object.values(ALL_DATA).some(d=>d.storeName===s.name);
     return `<div class="sc${hasData?"":" sc-nodata"}" onclick="showStore('${s.name}',this)">
       <div class="sc-name">${s.name}</div>
@@ -642,7 +792,7 @@ function buildStoreBtns(){
 function showStore(name, btn){
   document.querySelectorAll(".sg .sc").forEach(b=>b.classList.remove("on"));
   btn.classList.add("on");
-  const s=STORES_MASTER.find(x=>x.name===name);
+  const s=activeStores().find(x=>x.name===name);
   const d=Object.values(ALL_DATA).find(x=>x.storeName===name);
   const el=document.getElementById("store-detail");
   if(!d){el.innerHTML=`<p class="err-box">この店舗のデータが取得できていません。GAS設定タブでURLを登録・確認してください。</p>`;return;}
@@ -698,7 +848,7 @@ function staffPanel(st, s, d, solo){
     <div class="m"><div class="ml">販売売上</div><div class="mv">${fmtM(sd.sales.product)}</div></div>
     <div class="m"><div class="ml">消費売上</div><div class="mv">${fmtM(sd.sales.consume)}</div></div>
     <div class="m"><div class="ml">次回予約率</div><div class="mv">${sd.nextAppt.rate}<span class="mu">%</span></div><div class="ms">${sd.nextAppt.yes}/${sd.nextAppt.total}名</div></div>
-    <div class="m"><div class="ml">平均来院頻度</div><div class="mv" style="font-size:16px">${sd.avgFreqText||"—"}</div></div>
+    <div class="m"><div class="ml">平均来院頻度</div><div class="mv">${sd.avgFreqDays||"—"}<span class="mu">${sd.avgFreqDays?"日に1回":""}</span></div></div>
   </div>
   <div class="g3">
     ${metricCard("トライアル",sd.trial)}
@@ -710,7 +860,8 @@ function staffPanel(st, s, d, solo){
   </div>
   </div></div>`;
 }
-  function metricCard(title,obj){
+
+function metricCard(title,obj){
   return `<div class="card" style="margin:0"><div class="ct" style="font-size:12px">${title}</div>
   <table><tr><td style="color:var(--t2)">提案数</td><td style="text-align:right;font-weight:700">${obj.proposed}</td></tr>
   <tr><td style="color:var(--t2)">成約数</td><td style="text-align:right;font-weight:700">${obj.closed}</td></tr>
@@ -722,7 +873,7 @@ function couponCard(c){
   <tr><td style="color:var(--t2)">購入数</td><td style="text-align:right;font-weight:700">${c.closed}</td></tr>
   <tr><td style="color:var(--t2)">購入率</td><td style="text-align:right">${badge(c.rate,[70,55])}</td></tr>
   <tr><td style="color:var(--t2)">成約比率</td><td style="text-align:right"><span class="bg b">${c.ratio}%</span></td></tr>
-  ${c.breakdown?`<tr><td colspan="2" style="font-size:10px;color:var(--t3)">4回:${c.breakdown["4回券"]} / 更新:${c.breakdown["4回券更新"]||0} / 8回:${c.breakdown["8回券"]} / 12回:${c.breakdown["12回券"]}</td></tr>`:""}
+  ${c.breakdown?`<tr><td colspan="2" style="font-size:10px;color:var(--t3)">4回:${c.breakdown["4回券"]} / 8回:${c.breakdown["8回券"]} / 12回:${c.breakdown["12回券"]}</td></tr>`:""}
   </table></div>`;
 }
 function maintCard(m){
@@ -743,7 +894,7 @@ function buildRouteFilters(){
   const rst=document.getElementById("r-staff");
   rs.innerHTML="<option value='all'>全店舗</option>";
   rst.innerHTML="<option value='all'>全員</option>";
-  STORES_MASTER.forEach(s=>{
+  activeStores().forEach(s=>{
     if(!Object.values(ALL_DATA).some(d=>d.storeName===s.name)) return;
     const o=document.createElement("option");o.value=s.name;o.textContent=s.name;rs.appendChild(o);
   });
@@ -758,6 +909,7 @@ function updateRouteView(){
   const store=document.getElementById("r-store").value;
   const staff=document.getElementById("r-staff").value;
 
+  // 対象スタッフデータ収集
   const sdList=[];
   Object.values(ALL_DATA).forEach(d=>{
     if(store!=="all" && d.storeName!==store) return;
@@ -785,7 +937,8 @@ function updateRouteView(){
   });
 
   // ===== 共通：人数・割合・成約率の行を作る関数 =====
-  function makeRows(keys, statKey){
+  function makeRows(keys, statKey, totalPersons){
+    // 各キーの合算
     const agg={};
     keys.forEach(k=>agg[k]={total:0,closed:0});
     sdList.forEach(sd=>{
@@ -812,15 +965,19 @@ function updateRouteView(){
     }).join("");
   }
 
+  // ===== 年齢別 =====
   const AGE_KEYS=["20代","30代","40代","50代","60代","70代以上"];
   document.getElementById("age-tbody").innerHTML=makeRows(AGE_KEYS,"ageStats");
 
+  // ===== お悩み別 =====
   const CONCERN_KEYS=["肩こり","首こり","姿勢の悪さ","骨盤の歪み","腰痛","眼性疲労","膝痛","五十肩","神経痛"];
   document.getElementById("concern-tbody").innerHTML=makeRows(CONCERN_KEYS,"concernStats");
 
+  // ===== 性別別 =====
   document.getElementById("gender-tbody").innerHTML=makeRows(["男","女"],"genderStats");
 
   // ===== 経路別成約率 =====
+  // 来院件数はroutes、成約率はconcernStats等と同様にrouteConvRateから合算
   const rconvAgg={};
   ROUTE_KEYS.forEach(k=>rconvAgg[k]={total:routes[k],closed:0});
   sdList.forEach(sd=>{
@@ -897,7 +1054,10 @@ function updateCrossTable(){
     </tr>`;
   }).join("")||"<tr><td colspan='10' class='load-box'>スタッフを選択してください</td></tr>";
 
+  // ランキング生成
   buildRankings(rows);
+
+
 }
 
 // ============================================================
@@ -918,18 +1078,23 @@ function buildRankings(rows){
     }).join("") || "<tr><td colspan='4' style='color:var(--t3);font-size:12px'>データなし</td></tr>";
   }
 
+  // トライアル成約率
   const byTrial = [...rows].sort((a,b)=>(b.sd.trial?.rate||0)-(a.sd.trial?.rate||0));
   rankRows(byTrial, sd=>sd.trial?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-trial");
 
+  // 回数券購入率
   const byCoupon = [...rows].sort((a,b)=>(b.sd.coupon?.rate||0)-(a.sd.coupon?.rate||0));
   rankRows(byCoupon, sd=>sd.coupon?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-coupon");
 
+  // メンテ移行率
   const byMaint = [...rows].sort((a,b)=>(b.sd.maint?.rate||0)-(a.sd.maint?.rate||0));
   rankRows(byMaint, sd=>sd.maint?.rate||0, v=>`<span class="bg ${v>=65?'g':v>=41?'a':'r'}">${v}%</span>`, "rank-maint");
 
+  // 販売売上
   const byProduct = [...rows].sort((a,b)=>(b.sd.sales?.product||0)-(a.sd.sales?.product||0));
   rankRows(byProduct, sd=>sd.sales?.product||0, v=>fmtM(v), "rank-product");
 
+  // 消費売上
   const byConsume = [...rows].sort((a,b)=>(b.sd.sales?.consume||0)-(a.sd.sales?.consume||0));
   rankRows(byConsume, sd=>sd.sales?.consume||0, v=>fmtM(v), "rank-consume");
 }
@@ -943,6 +1108,7 @@ function badge(v,thr){
 }
 function fmtM(v){
   if(!v) return "—";
+  // 10円単位で3桁カンマ区切り表示
   const rounded = Math.round(v / 10) * 10;
   return "¥" + rounded.toLocaleString("ja-JP") + "円";
 }
